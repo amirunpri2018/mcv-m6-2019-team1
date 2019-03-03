@@ -102,3 +102,6 @@ venv.bak/
 
 # mypy
 .mypy_cache/
+
+# Frames in dataset
+datasets/m6_week1_frames/
