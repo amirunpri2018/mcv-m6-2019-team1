@@ -1,3 +1,4 @@
+import xml
 
 import numpy as np
 
@@ -44,7 +45,7 @@ def create_or_destroy_bboxes(bboxes, prob=0.5):
 
 
 def add_noise_to_bboxes(bboxes, shape, noise_size=True, noise_size_factor=5.0,
-                        noise_position=True, noise_position_factor=5.0)
+                        noise_position=True, noise_position_factor=5.0):
     """
     Add noise to a list of bounding boxes.
     
@@ -148,11 +149,11 @@ def apk(actual, predicted, k=10):
     This function computes the average prescision at k between two lists of
     items.
 
-    @:param actual: A list of elements that are to be predicted (order doesn't
+    :param actual: A list of elements that are to be predicted (order doesn't
         matter)
-    @:param predicted: A list of predicted elements (order does matter)
-    @:param k: The maximum number of predicted elements. Default value: 10
-    @:return score: The average precision at k over the input lists
+    :param predicted: A list of predicted elements (order does matter)
+    :param k: The maximum number of predicted elements. Default value: 10
+    :return score: The average precision at k over the input lists
     """
     if k < len(predicted):
         predicted = predicted[:k]
@@ -177,11 +178,17 @@ def mapk(actual, predicted, k=10):
     This function computes the mean average prescision at k between two lists
     of lists of items.
 
-    @:param actual: A list of lists of elements that are to be predicted (order
-        doesn't matter in the lists)
-    @:param predicted: A list of lists of predicted elements (order matters in
+    :param actual: A list of lists of elements that are to be predicted (order
+       doesn't matter in the lists)
+    :param predicted: A list of lists of predicted elements (order matters in
         the lists)
-    @:param k: The maximum number of predicted elements. Default value: 10
-    @:return score: The mean average precision at k over the input lists
+    :param k: The maximum number of predicted elements. Default value: 10
+    :return score: The mean average precision at k over the input lists
     """
     return np.mean([apk(a, p, k) for a, p in zip(actual, predicted)])
+
+
+def xml_pascal_to_aicity(xml_file, folder=None):
+    xml_output = None
+    e = xml.etree.ElementTree.parse(xml_file).getroot()
+
