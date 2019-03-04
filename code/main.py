@@ -175,11 +175,13 @@ plt.savefig('figures/map.png')
 
 # Use the following function:
 
-# optical_flow_mse = u.mse(gt_optical_flow, result_optical_flow)
+optical_flow_mse = u.mse(gt_optical_flow, result_optical_flow)
 
 # PEPN: Percentage of Erroneous Pixels in Non-occluded areas
 
 # Draw histograms of resulting metrics:
+
+hist = u.histogram(im_array, bins=128)
 
 ############################
 # TASK 4: PLOT Optical Flow

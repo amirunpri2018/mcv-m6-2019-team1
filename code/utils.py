@@ -331,4 +331,23 @@ def non_max_suppression(bboxes, overlap_thresh):
     # Return only the bounding boxes that were picked using the integer data type
     return bboxes[pick].astype("int")
 
+def histogram(im_array, bins=128):
+    """
+    This function returns the centers of bins and does not rebin integer arrays. For integer arrays,
+    each integer value has its own bin, which improves speed and intensity-resolution.
 
+    This funcion support multi channel images, returning a list of histogram and bin centers for
+    each channel.
+
+    :param im_array: Numpy array representation of an image
+    :param bins: Number of bins of the histogram
+    :return: List of histograms and bin centers for each channel
+    """
+
+    hist, bin_centers = list(), list()
+    for i in range(im_array.shape[2]):
+        _hist, _bin_centers = exposure.histogram(im_array[..., i], bins)
+        hist.append(_hist)
+        bin_centers.append(_bin_centers)
+
+    return hist, bin_centers
