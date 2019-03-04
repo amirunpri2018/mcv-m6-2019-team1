@@ -8,10 +8,7 @@ import shutil
 import time
 import glob
 
-from evaluation.evaluation_funcs import performance_evaluation_pixel
-from utils import get_img, rgb2hsv, threshold_image, save_image, get_files_from_dir, confusion_matrix, \
-    print_confusion_matrix, print_metrics
-from export_data import export_image_and_mask
+import utils as u
 
 # Logger setup
 logging.basicConfig(
@@ -26,78 +23,163 @@ logger = logging.getLogger(__name__)
 # Useful directories
 ROOT_DIR = os.path.dirname(os.path.abspath(__file__))
 TRAIN_DIR = os.path.join('dataset', 'train')
-TRAIN_GTS_DIR = os.path.join(TRAIN_DIR, 'gt')
-TRAIN_MASKS_DIR = os.path.join(TRAIN_DIR, 'mask')
-#TEST_DIR = os.path.join('dataset', 'test')
+TRAIN_DIR_GT = os.path.join(TRAIN_DIR, 'gt')
 
-train = True
-if train:
-    RESULT_DIR = os.path.join('results', 'masks', 'train')
-    IMAGE_DIR = TRAIN_DIR
-else:
-    RESULT_DIR = os.path.join('results', 'masks', 'test')
-    IMAGE_DIR = os.path.join('dataset', 'test')
+img_shape = [1080, 1920]
 
-# If the directory already exists, delete it
-if os.path.exists(RESULT_DIR):
-    shutil.rmtree(RESULT_DIR)
+# Get Xtml list from Dir:
 
-# Create directory
-os.makedirs(RESULT_DIR)
+xml_gt = u.get_files_from_dir(TRAIN_DIR_GT)
 
-# Get list of test images in test directory
-test_images = get_files_from_dir(IMAGE_DIR)
-#test_images = os.listdir(TEST_DIR)
+# Get GT from Xml (Pandas format Bbox, frame number, track number) :
 
-# Set threshold based on ranges of interest
-ths_h = np.array([
-    [0.0, 0.05],     # Red threshold
-    [0.55, 0.65],   # Blue threshold
-    [0.95, 1.0]      # Res threshold
-])
-ths_s = np.array([[0.0, 1.0]])
-ths_v = np.array([[0.0, 1.0]])
+# ToDo: Write function that reads Xml file and outputs Pandas format Bbox [xtl ytl xbr ybr], frame number,
+# track number) .
 
-# Get elapsed time
-t0 = time.time()
-t_frame = 0
+bboxes_gt = u.bbox_from_xml(xml_gt)     #ToDo!
 
-# Iterate over test image paths
-for img_dir_temp in glob.glob(IMAGE_DIR + "/*.jpg"):
-    img_dir = img_dir_temp.split("/")[-1]
+# Add noise to GT depending on noise parameter:
 
-    t_frame_0 = time.time()
-    # Get numpy array of the image and convert it to HSV
-    img = get_img(IMAGE_DIR, img_dir)
-    img_hsv = rgb2hsv(img)
-    # img_hsv = ndimage.filters.gaussian_filter(img_hsv, sigma=3)
-
-    # Get the mask of the HSV image
-    mask = threshold_image(img_hsv, ths_h, channel=0)
-    #mask += threshold_image(img_hsv, ths_s, channel=1)
-    #mask += threshold_image(img_hsv, ths_v, channel=2)
-
-    # Create a numpy array where mask values are 255
-    final = mask.astype(np.uint8) * 255
-
-    # Save mask as image
-    fn, d = save_image(final, RESULT_DIR, img_dir)
-    logger.info(
-        "'{filename}' saved in '{folder}' folder".format(
-            filename=fn,
-            folder=os.path.join(
-                ROOT_DIR,
-                d)))
-
-    t_frame += time.time() - t_frame_0
-
-logger.info("%d masks saved in %.3fs (%.3fs per frame)" %
-            (len(test_images), time.time() - t0, t_frame / len(test_images)))
-
-# Export images + masks results
-# export_image_and_mask(IMAGE_DIR, RESULT_DIR, RESULT_DIR.replace("masks","image+masks"))
+noisy_bboxes = u.add_noise_to_bboxes(bboxes_gt, img_shape, noise_size=True, noise_size_factor=5.0,
+                        noise_position=True, noise_position_factor=5.0)
 
 
+# Randomly create / destroy Bboxes depending on probability parameter:
+
+added_bboxes = u.create_bboxes(noisy_bboxes, img_shape, prob=0.5)
+
+deleted_bboxes = u.destroy_bboxes(added_bboxes, prob=0.5)
+
+
+#############################################################
+# Compute F-score of GT against modified Bboxes PER FRAME NUMBER:
+#############################################################
+
+# ToDo: Add dependency on frame number
+
+# ToDo: Create function fscore
+
+# FIRST CASE: gt against gt (we expect excellent result)
+
+fscore_original = []
+
+for b, box in enumerate(bboxes_gt):
+    fscore_original.append(u.fscore(bboxes_gt[b], bboxes_gt[b]))
+
+# SECOND CASE: gt against noisy bboxes (we know the correspondance of gt against bbox)
+
+fscore_noisy = []
+
+for b, box in enumerate(bboxes_gt):
+    fscore_noisy.append(u.fscore(bboxes_gt[b], noisy_bboxes[b]))
+
+# THIRD CASE: gt against destroyed / added bboxes (we DONT know the correspondance of gt against bbox)
+
+
+#############################################################
+# Compute IoU of GT against modified Bboxes PER FRAME NUMBER:
+#############################################################
+
+# ToDo: Add dependency on frame number
+
+# FIRST CASE: gt against gt (we expect excellent result)
+
+iou_original = []
+
+for b, box in enumerate(bboxes_gt):
+    iou_original.append(u.bbox_iou(bboxes_gt[b], bboxes_gt[b])
+
+# SECOND CASE: gt against noisy bboxes (we know the correspondance of gt against bbox)
+
+iou_noisy = []
+
+for b, box in enumerate(bboxes_gt):
+    iou_noisy.append(u.bbox_iou(bboxes_gt[b], noisy_bboxes[b])
+
+# THIRD CASE: gt against destroyed / added bboxes (we DONT know the correspondance of gt against bbox)
+
+#ToDo!
+
+#############################################################
+# Compute MaP of GT against modified Bboxes PER FRAME NUMBER:
+#############################################################
+
+# ToDo: Add dependency on frame number
+
+# FIRST CASE: gt against gt (we expect excellent result)
+
+map_original = []
+
+for b, box in enumerate(bboxes_gt):
+    map_original.append(u.mapk(bboxes_gt[b], bboxes_gt[b])
+
+# SECOND CASE: gt against noisy bboxes (we know the correspondance of gt against bbox)
+
+map_noisy = []
+
+for b, box in enumerate(bboxes_gt):
+    map_noisy.append(u.mapk(bboxes_gt[b], noisy_bboxes[b])
+
+# THIRD CASE: gt against destroyed / added bboxes (we DONT know the correspondance of gt against bbox)
+
+##########################################
+# TASK 2: Plot metrics against frame number
+##########################################
+
+#ToDo: Define frame_number!
+
+#ToDo: We can vary noise parameter and plot several noisy results in same graph, labeling them by noise param.
+
+# Plot F-score :
+
+plt.plot(fscore_original, frame_number, label = 'Original')
+plt.plot(fscore_noisy, frame_number, label='Noisy')
+plt.legend()
+plt.xlabel('Frame Number')
+plt.ylabel('F-score')
+plt.title('F-score in time')
+
+# Plot IoU :
+
+plt.plot(iou_original, frame_number, label='Original')
+plt.plot(iou_noisy, frame_number, label='Noisy')
+plt.legend()
+plt.xlabel('Frame Number')
+plt.ylabel('IoU')
+plt.title('IoU in time')
+
+# Plot Mapk :
+
+plt.plot(map_original, frame_number, label='Original')
+plt.plot(map_noisy, frame_number, label='Noisy')
+plt.legend()
+plt.xlabel('Frame Number')
+plt.ylabel('MaP')
+plt.title('MaP in time')
+
+# Should we plot the results against the noise parameter??? I think this makes more sense!!
+
+
+#######################
+# TASK 3: Optical Flow
+#######################
+
+# Compute Optical Flow of the two Kitti sequences
+
+# Obtain error metrics:
+
+# MSEN: Mean Square Error in Non-occluded areas
+
+# PEPN: Percentage of Erroneous Pixels in Non-occluded areas
+
+# Draw histograms of resulting metrics:
+
+############################
+# TASK 4: PLOT Optical Flow
+############################
+
+
+#########################################################################
 # conf_mat = confusion_matrix(RESULT_DIR, TRAIN_MASKS_DIR)
 # print_confusion_matrix(conf_mat)
 # metrics = performance_evaluation_pixel(*conf_mat)

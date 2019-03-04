@@ -25,9 +25,21 @@ def recall(tp, fn):
     return tp / (tp + fn)
 
 
-def create_or_destroy_bboxes(bboxes, prob=0.5):
+def fscore(tp, fp, fn):
     """
-    Create or destroy bounding boxes based on probability value.
+    Computes f1-score.
+
+    :param tp: True positives
+    :param fp: False positives
+    :param fn: False negatives
+    :return: f1-score
+    """
+    return 2 * precision(tp, fp) * recall(tp, fn) / (precision(tp, fp) + recall(tp, fn))
+
+
+def destroy_bboxes(bboxes, prob=0.5):
+    """
+    Destroy bounding boxes based on probability value.
 
     :param bboxes: List of bounding boxes
     :param prob: Probability to dump a bounding box
@@ -43,6 +55,26 @@ def create_or_destroy_bboxes(bboxes, prob=0.5):
 
     return final_bboxes
 
+def create_bboxes(bboxes, shape, prob=0.5):
+    """
+    Create bounding boxes based on probability value.
+
+    :param bboxes: List of bounding boxes
+    :param prob: Probability to create a bounding box
+    :return: List of bounding boxes
+    """
+
+    if not isinstance(bboxes, list):
+        bboxes = list(bboxes)
+
+    for bbox in bboxes:
+        if prob < np.random.random():
+            new_bbox = add_noise_to_bboxes(bbox, shape, noise_size=True, noise_size_factor=30.0,
+                        noise_position=True, noise_position_factor=30.0)
+            bboxes.append(new_bbox)
+
+    return bboxes
+
 
 def add_noise_to_bboxes(bboxes, shape, noise_size=True, noise_size_factor=5.0,
                         noise_position=True, noise_position_factor=5.0):
@@ -53,6 +85,7 @@ def add_noise_to_bboxes(bboxes, shape, noise_size=True, noise_size_factor=5.0,
     indicate top-left and bottom-right corners of the bbox respectively.
     
     :param bboxes: List of bounding boxes
+    :param shape: Image shape
     :param noise_size: Flag to add noise to the bounding box size
     :param noise_size_factor: Factor noise in bounding box size
     :param noise_position: Flag to add noise to the bounding box position
@@ -191,4 +224,32 @@ def mapk(actual, predicted, k=10):
 def xml_pascal_to_aicity(xml_file, folder=None):
     xml_output = None
     e = xml.etree.ElementTree.parse(xml_file).getroot()
+
+
+def get_files_from_dir(directory, excl_ext=None):
+    """
+    Get only files from directory.
+
+    :param directory: Directory path
+    :param excl_ext: List with extensions to exclude
+    :return: List of files in directory
+    """
+
+    logger.debug("Getting files in '{path}'".format(path=os.path.abspath(directory)))
+
+    excl_ext = list() if excl_ext is None else excl_ext
+
+    l = [
+        f for f in os.listdir(directory)
+        if os.path.isfile(os.path.join(directory, f)) and f.split('.')[-1] not in excl_ext
+    ]
+    logger.debug("Retrieving {num_files} files from '{path}'".format(num_files=len(l), path=os.path.abspath(directory)))
+
+    return l
+
+def bbox_from_xml(xml_file):
+    ''' Function that reads Xml file and outputs Pandas with format:
+     Bbox [xtl ytl xbr ybr], frame number, track number)'''
+
+    pass
 
