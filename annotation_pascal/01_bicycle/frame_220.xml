@@ -1,0 +1,26 @@
+<annotation>
+	<folder>team1</folder>
+	<filename>frame_220.png</filename>
+	<path>/home/agus/repos/labelImg-master_2/labelImg-master/save_bike_1/frame_220.png</path>
+	<source>
+		<database>Unknown</database>
+	</source>
+	<size>
+		<width>1920</width>
+		<height>1080</height>
+		<depth>3</depth>
+	</size>
+	<segmented>0</segmented>
+	<object>
+		<name>bike</name>
+		<pose>Unspecified</pose>
+		<truncated>0</truncated>
+		<difficult>0</difficult>
+		<bndbox>
+			<xmin>86</xmin>
+			<ymin>716</ymin>
+			<xmax>229</xmax>
+			<ymax>1072</ymax>
+		</bndbox>
+	</object>
+</annotation>
