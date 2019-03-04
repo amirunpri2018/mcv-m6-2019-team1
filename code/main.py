@@ -51,10 +51,10 @@ test_images = get_files_from_dir(IMAGE_DIR)
 
 # Set threshold based on ranges of interest
 ths_h = np.array([
-      [0.0, 0.05],     # Red threshold
-      [0.55, 0.65],   # Blue threshold
-      [0.95, 1.0]      # Res threshold
-      ])
+    [0.0, 0.05],     # Red threshold
+    [0.55, 0.65],   # Blue threshold
+    [0.95, 1.0]      # Res threshold
+])
 ths_s = np.array([[0.0, 1.0]])
 ths_v = np.array([[0.0, 1.0]])
 
@@ -78,19 +78,23 @@ for img_dir_temp in glob.glob(IMAGE_DIR + "/*.jpg"):
     #mask += threshold_image(img_hsv, ths_v, channel=2)
 
     # Create a numpy array where mask values are 255
-    final = mask.astype(np.uint8)*255
+    final = mask.astype(np.uint8) * 255
 
     # Save mask as image
     fn, d = save_image(final, RESULT_DIR, img_dir)
-    logger.info("'{filename}' saved in '{folder}' folder".format(filename=fn, folder=os.path.join(ROOT_DIR, d)))
+    logger.info(
+        "'{filename}' saved in '{folder}' folder".format(
+            filename=fn,
+            folder=os.path.join(
+                ROOT_DIR,
+                d)))
 
     t_frame += time.time() - t_frame_0
 
-logger.info(
-    "%d masks saved in %.3fs (%.3fs per frame)" % (len(test_images), time.time() - t0, t_frame / len(test_images))
-)
+logger.info("%d masks saved in %.3fs (%.3fs per frame)" %
+            (len(test_images), time.time() - t0, t_frame / len(test_images)))
 
-### Export images + masks results
+# Export images + masks results
 # export_image_and_mask(IMAGE_DIR, RESULT_DIR, RESULT_DIR.replace("masks","image+masks"))
 
 
