@@ -132,30 +132,33 @@ for b, box in enumerate(bboxes_gt):
 
 # Plot F-score :
 
-plt.plot(fscore_original, frame_number, label = 'Original')
-plt.plot(fscore_noisy, frame_number, label='Noisy')
+plt.plot(fscore_original, '-o', frame_number, label = 'Original')
+plt.plot(fscore_noisy, '-o', frame_number, label='Noisy')
 plt.legend()
 plt.xlabel('Frame Number')
 plt.ylabel('F-score')
 plt.title('F-score in time')
+plt.savefig('figures/fscore.png')
 
 # Plot IoU :
 
-plt.plot(iou_original, frame_number, label='Original')
-plt.plot(iou_noisy, frame_number, label='Noisy')
+plt.plot(iou_original, '-o', frame_number, label='Original')
+plt.plot(iou_noisy, '-o', frame_number, label='Noisy')
 plt.legend()
 plt.xlabel('Frame Number')
 plt.ylabel('IoU')
 plt.title('IoU in time')
+plt.savefig('figures/iou.png')
 
 # Plot Mapk :
 
-plt.plot(map_original, frame_number, label='Original')
-plt.plot(map_noisy, frame_number, label='Noisy')
+plt.plot(map_original, '-o', frame_number, label='Original')
+plt.plot(map_noisy, '-o', frame_number, label='Noisy')
 plt.legend()
 plt.xlabel('Frame Number')
 plt.ylabel('MaP')
 plt.title('MaP in time')
+plt.savefig('figures/map.png')
 
 # Should we plot the results against the noise parameter??? I think this makes more sense!!
 
@@ -169,6 +172,10 @@ plt.title('MaP in time')
 # Obtain error metrics:
 
 # MSEN: Mean Square Error in Non-occluded areas
+
+# Use the following function:
+
+# optical_flow_mse = u.mse(gt_optical_flow, result_optical_flow)
 
 # PEPN: Percentage of Erroneous Pixels in Non-occluded areas
 
