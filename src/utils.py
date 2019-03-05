@@ -6,10 +6,10 @@ import os
 import urllib
 
 # 3rd party modules
+import bs4
 import numpy as np
 import pandas as pd
 
-from bs4 import BeautifulSoup
 from skimage import exposure
 
 # Local modules
@@ -264,7 +264,7 @@ def add_tag(parent, tag_name, tag_value=None, tag_attrs=None):
 
 
 def create_aicity_xml_file(fname, dataframe):
-    soup = BeautifulSoup('<annotations>', 'xml')
+    soup = bs4.BeautifulSoup('<annotations>', 'xml')
     add_tag(soup, 'version', tag_value='1.1')
     add_tag(soup, 'meta')
     add_tag(soup.meta, 'task')
@@ -322,25 +322,61 @@ def read_xml(xml_fname):
     :return: BeautifulSoup object
     """
     xml_doc = urllib.urlopen(xml_fname)
-    return BeautifulSoup(xml_doc.read(), features='xml')
+    return bs4.BeautifulSoup(xml_doc.read(), features='xml')
 
 
-def get_bboxes_from_aicity(fname):
+def get_bboxes_from_aicity(fnames):
     """
     Get bounding boxes from AICity XML-like file.
 
-    :param fname: XML filename
+    :param fname: List XML filename
     :return: Pandas DataFrame with the data
     """
-    # Read file
-    soup = read_xml(fname)
-    # Get parent tag of bounding boxes
-    bboxes_tag = soup.find('track')
+    if not isinstance(fnames, list):
+        fnames = [fnames]
 
     bboxes = list()
-    # Iterate over bounding boxes and append the attributes to the list
-    for child in bboxes_tag.find_all('box'):
-        bboxes.append(child.attrs)
+    for fname in fnames:
+        # Read file
+        soup = read_xml(fname)
+        # Get parent tag of bounding boxes
+        bboxes_tag = soup.find('track')
+        # Iterate over bounding boxes and append the attributes to the list
+        for child in bboxes_tag.find_all('box'):
+            bboxes.append(child.attrs)
+
+    # Return DataFrame
+    return pd.DataFrame(bboxes)
+
+
+def get_bboxes_from_pascal(fnames, track_id):
+    """
+    Get bounding boxes from Pascal XML-like file.
+
+    :param fname: List XML filename
+    :return: Pandas DataFrame with the data
+    """
+    if not isinstance(fnames, list):
+        fnames = [fnames]
+
+    bboxes = list()
+    for fname in fnames:
+        # Read file
+        soup = read_xml(fname)
+        # Get parent tag of bounding boxes
+        object_tag = soup.find('object')
+
+        attrs = {
+            'frame': int(soup.find('filename').string.split('_')[1].split('.')[0]),
+            'occlusion': int(object_tag.find('difficult').string),
+            'track_id': track_id
+        }
+
+        # Iterate over bounding boxes and append the attributes to the list
+        for child in object_tag.find('bndbox').children:
+            if isinstance(child, bs4.element.Tag):
+                attrs[child.name] = float(child.string)
+        bboxes.append(attrs)
 
     # Return DataFrame
     return pd.DataFrame(bboxes)
@@ -360,7 +396,7 @@ def get_files_from_dir(directory, excl_ext=None):
     excl_ext = list() if excl_ext is None else excl_ext
 
     l = [
-        f for f in os.listdir(directory)
+        os.path.join(directory, f) for f in os.listdir(directory)
         if os.path.isfile(os.path.join(directory, f)) and f.split('.')[-1] not in excl_ext
     ]
     logger.debug("Retrieving {num_files} files from '{path}'".format(num_files=len(l), path=os.path.abspath(directory)))
