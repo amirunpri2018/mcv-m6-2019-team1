@@ -15,12 +15,12 @@
 		<name>car</name>
 		<pose>Unspecified</pose>
 		<truncated>0</truncated>
-		<difficult>0</difficult>
+		<difficult>1</difficult>
 		<bndbox>
-			<xmin>878</xmin>
-			<ymin>54</ymin>
-			<xmax>956</xmax>
-			<ymax>92</ymax>
+			<xmin>1111</xmin>
+			<ymin>677</ymin>
+			<xmax>1462</xmax>
+			<ymax>970</ymax>
 		</bndbox>
 	</object>
 </annotation>

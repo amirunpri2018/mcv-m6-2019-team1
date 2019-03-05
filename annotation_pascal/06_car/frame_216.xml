@@ -14,13 +14,13 @@
 	<object>
 		<name>car</name>
 		<pose>Unspecified</pose>
-		<truncated>0</truncated>
+		<truncated>1</truncated>
 		<difficult>1</difficult>
 		<bndbox>
-			<xmin>930</xmin>
-			<ymin>56</ymin>
-			<xmax>990</xmax>
-			<ymax>94</ymax>
+			<xmin>1113</xmin>
+			<ymin>803</ymin>
+			<xmax>1493</xmax>
+			<ymax>1080</ymax>
 		</bndbox>
 	</object>
 </annotation>

@@ -1,7 +1,7 @@
 <annotation>
 	<folder>team1</folder>
-	<filename>frame_266.png</filename>
-	<path>/home/agus/repos/labelImg-master_2/labelImg-master/save_car_2/frame_266.png</path>
+	<filename>frame_266.jpg</filename>
+	<path>/home/agus/repos/mcv-m6-2019-team1/datasets/m6_week1_frames/frames/team1/frame_266.jpg</path>
 	<source>
 		<database>Unknown</database>
 	</source>
@@ -15,12 +15,12 @@
 		<name>car</name>
 		<pose>Unspecified</pose>
 		<truncated>0</truncated>
-		<difficult>1</difficult>
+		<difficult>0</difficult>
 		<bndbox>
-			<xmin>625</xmin>
-			<ymin>41</ymin>
-			<xmax>705</xmax>
-			<ymax>85</ymax>
+			<xmin>887</xmin>
+			<ymin>197</ymin>
+			<xmax>1053</xmax>
+			<ymax>330</ymax>
 		</bndbox>
 	</object>
 </annotation>
