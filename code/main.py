@@ -44,7 +44,9 @@ if __name__ == '__main__':
     # Get GT from XML
     df_gt = u.get_bboxes_from_aicity(xml_gt)
 
-    # NEW WAY TO COMPUTE IT!!
+
+    # Create for recorriendo frames
+    # data frame group by frame number
 
     bboxes, fscore, iou, map = u.compute_metrics(df_gt, IMG_SHAPE,
                                                noise_size=5,
@@ -52,140 +54,112 @@ if __name__ == '__main__':
                                                create_bbox_proba=0.5,
                                                destroy_bbox_proba=0.5,
                                                k=10)
-    # OLD WAY TO COMPUTE IT!!
-
-    # Add noise to GT depending on noise parameter
-    bboxes = u.add_noise_to_bboxes(df_gt, IMG_SHAPE,
-                                   noise_size=True,
-                                   noise_size_factor=5.0,
-                                   noise_position=True,
-                                   noise_position_factor=5.0)
-
-    # Randomly create and destroy bounding boxes depending
-    # on probability parameter
-    bboxes = u.create_bboxes(bboxes, IMG_SHAPE, prob=0.5)
-    bboxes = u.destroy_bboxes(bboxes, prob=0.5)
 
     """
-    Obtain TP, FP, TN metrics
+    1. Without noise: we expect excellent results
     """
 
-    #ToDo: Vary 'bbox candidates' between the original gt, noisy gt, and randmomly created bboxes.
-
-    window_candidates = df_gt # Original case
-    window_candidates = bboxes # Noisy case
-
-    [bboxTP, bboxFN, bboxFP] = performance_accumulation_window(window_candidates, df_gt)
-
-    """
-    Compute F-score of GT against modified bboxes PER FRAME NUMBER
-    """
-    # ToDo: Add dependency on frame number
-    # ToDo: Create function fscore
-
-    # FIRST CASE:
-    #   GT against GT (we expect excellent results)
-    fscore_original = list()
-
-    for b, box in enumerate(df_gt):
-        fscore_original.append(u.fscore(df_gt[b], df_gt[b]))
-
-    # SECOND CASE:
-    #   GT against noisy bboxes (we know the correspondance of GT against bbox)
-    fscore_noisy = list()
-
-    for b, box in enumerate(df_gt):
-        fscore_noisy.append(u.fscore(df_gt[b], bboxes[b]))
-
-    # THIRD CASE:
-    #   GT against destroyed / added bboxes (we DON'T know the
-    #   correspondance of GT against bbox)
+    bboxes1, fscore1, iou1, map1 = u.compute_metrics(df_gt, IMG_SHAPE,
+                                               noise_size=0,
+                                               noise_position=0,
+                                               create_bbox_proba=0,
+                                               destroy_bbox_proba=0,
+                                               k=1)
 
     """
-    Compute IoU of GT against modified Bboxes PER FRAME NUMBER:
-    """
-    # TODO: Add dependency on frame number
-    # FIRST CASE:
-    #   GT against GT (we expect excellent result)
-    iou_original = list()
-
-    for b, box in enumerate(df_gt):
-        iou_original.append(u.bbox_iou(df_gt[b], df_gt[b]))
-
-    # SECOND CASE:
-    #   GT against noisy bboxes (we know the correspondance of GT against bbox)
-    iou_noisy = list()
-
-    for b, box in enumerate(df_gt):
-        iou_noisy.append(u.bbox_iou(df_gt[b], bboxes[b]))
-
-    # THIRD CASE:
-    #   GT against destroyed / added bboxes (we DON'T know the
-    #   correspondance of GT against bbox)
-    # TODO
-
-    """
-    Compute mAP of GT against modified bboxes PER FRAME NUMBER:
+    2. Add noise: (noise param = 5)
     """
 
-    # TODO: Add dependency on frame number
-    # FIRST CASE:
-    #   GT against GT (we expect excellent result)
-    map_original = list()
+    bboxes2, fscore2, iou2, map2 = u.compute_metrics(df_gt, IMG_SHAPE,
+                                                     noise_size=5,
+                                                     noise_position=5,
+                                                     create_bbox_proba=0,
+                                                     destroy_bbox_proba=0,
+                                                     k=1)
 
-    for b, box in enumerate(df_gt):
-        map_original.append(u.mapk(df_gt[b], df_gt[b]))
+    """
+    3. Increase noise: (noise param = 10)
+    """
 
-    # SECOND CASE:
-    #   GT against noisy bboxes (we know the correspondance of GT against bbox)
-    map_noisy = list()
+    bboxes3, fscore3, iou3, map3 = u.compute_metrics(df_gt, IMG_SHAPE,
+                                                     noise_size=10,
+                                                     noise_position=10,
+                                                     create_bbox_proba=0,
+                                                     destroy_bbox_proba=0,
+                                                     k=1)
 
-    for b, box in enumerate(df_gt):
-        map_noisy.append(u.mapk(df_gt[b], bboxes[b]))
+    """
+    4. Add random Bboxes: (noise param = 10, bbox proba = 0.5)
+    """
 
-    # THIRD CASE:
-    #   GT against destroyed / added bboxes (we DON'T know the
-    #   correspondance of GT against bbox)
-    # TODO
+    bboxes4, fscore4, iou4, map4 = u.compute_metrics(df_gt, IMG_SHAPE,
+                                                     noise_size=10,
+                                                     noise_position=10,
+                                                     create_bbox_proba=0.5,
+                                                     destroy_bbox_proba=0.5,
+                                                     k=1)
+
+    """
+    5. Increase random Bboxes: (noise param = 10, bbox proba = 0.8)
+    """
+
+    bboxes5, fscore5, iou5, map5 = u.compute_metrics(df_gt, IMG_SHAPE,
+                                                     noise_size=10,
+                                                     noise_position=10,
+                                                     create_bbox_proba=0.8,
+                                                     destroy_bbox_proba=0.8,
+                                                     k=1)
 
     """
     TASK 2: Plot metrics against frame number
     """
     # TODO: Define frame_number!
-    # TODO: We can vary noise parameter and plot several noisy results in
-    #   same graph, labeling them by noise param.
 
-    frame_number = 1
+    """
+    Plot F-score
+    """
 
-    # Plot F-score
-    plt.plot(fscore_original, '-o', frame_number, label = 'Original')
-    plt.plot(fscore_noisy, '-o', frame_number, label='Noisy')
+    plt.plot(frame_number, fscore1, '-o', label = 'Original')
+    plt.plot(frame_number, fscore2, '-o', label = 'Noise 5px')
+    plt.plot(frame_number, fscore3, '-o', label = 'Noise 10px')
+    plt.plot(frame_number, fscore4, '-o', label = 'Noise 10px + 50% bboxes')
+    plt.plot(frame_number, fscore5, '-o', label = 'Noise 10px + 80% bboxes')
     plt.legend()
     plt.xlabel('Frame Number')
     plt.ylabel('F-score')
     plt.title('F-score in time')
     plt.savefig(os.path.join(FIGURES_DIR, 'fscore.png'))
 
-    # Plot IoU
-    plt.plot(iou_original, '-o', frame_number, label='Original')
-    plt.plot(iou_noisy, '-o', frame_number, label='Noisy')
+    """
+    Plot IoU
+    """
+
+    plt.plot(frame_number, iou1, '-o', label = 'Original')
+    plt.plot(frame_number, iou2, '-o', label = 'Noise 5px')
+    plt.plot(frame_number, iou3, '-o', label = 'Noise 10px')
+    plt.plot(frame_number, iou4, '-o', label = 'Noise 10px + 50% bboxes')
+    plt.plot(frame_number, iou5, '-o', label = 'Noise 10px + 80% bboxes')
     plt.legend()
     plt.xlabel('Frame Number')
     plt.ylabel('IoU')
     plt.title('IoU in time')
     plt.savefig(os.path.join(FIGURES_DIR, 'iou.png'))
 
-    # Plot Mapk :
-    plt.plot(map_original, '-o', frame_number, label='Original')
-    plt.plot(map_noisy, '-o', frame_number, label='Noisy')
+    """
+    Plot Mapk:
+    """
+
+    plt.plot(frame_number, map1, '-o', label = 'Original')
+    plt.plot(frame_number, map2, '-o', label = 'Noise 5px')
+    plt.plot(frame_number, map3, '-o', label = 'Noise 10px')
+    plt.plot(frame_number, map4, '-o', label = 'Noise 10px + 50% bboxes')
+    plt.plot(frame_number, map5, '-o', label = 'Noise 10px + 80% bboxes')
     plt.legend()
     plt.xlabel('Frame Number')
-    plt.ylabel('MaP')
-    plt.title('MaP in time')
+    plt.ylabel('mAP')
+    plt.title('mAP at 1 in time')
     plt.savefig(os.path.join(FIGURES_DIR, 'map.png'))
 
-    # Should we plot the results against the noise parameter???
-    # I think this makes more sense!!
 
     """
     TASK 3: Optical Flow
@@ -208,3 +182,102 @@ if __name__ == '__main__':
     # print_confusion_matrix(conf_mat)
     # metrics = performance_evaluation_pixel(*conf_mat)
     # print_metrics(metrics)
+
+"""
+    # OLD WAY TO COMPUTE IT!!
+
+    # Add noise to GT depending on noise parameter
+    bboxes = u.add_noise_to_bboxes(df_gt, IMG_SHAPE,
+                                   noise_size=True,
+                                   noise_size_factor=5.0,
+                                   noise_position=True,
+                                   noise_position_factor=5.0)
+
+    # Randomly create and destroy bounding boxes depending
+    # on probability parameter
+    bboxes = u.create_bboxes(bboxes, IMG_SHAPE, prob=0.5)
+    bboxes = u.destroy_bboxes(bboxes, prob=0.5)
+
+
+    Obtain TP, FP, TN metrics
+
+
+    #ToDo: Vary 'bbox candidates' between the original gt, noisy gt, and randmomly created bboxes.
+
+    window_candidates = df_gt # Original case
+    window_candidates = bboxes # Noisy case
+
+    [bboxTP, bboxFN, bboxFP] = performance_accumulation_window(window_candidates, df_gt)
+
+
+    Compute F-score of GT against modified bboxes PER FRAME NUMBER
+
+    # ToDo: Add dependency on frame number
+    # ToDo: Create function fscore
+
+    # FIRST CASE:
+    #   GT against GT (we expect excellent results)
+    fscore_original = list()
+
+    for b, box in enumerate(df_gt):
+        fscore_original.append(u.fscore(df_gt[b], df_gt[b]))
+
+    # SECOND CASE:
+    #   GT against noisy bboxes (we know the correspondance of GT against bbox)
+    fscore_noisy = list()
+
+    for b, box in enumerate(df_gt):
+        fscore_noisy.append(u.fscore(df_gt[b], bboxes[b]))
+
+    # THIRD CASE:
+    #   GT against destroyed / added bboxes (we DON'T know the
+    #   correspondance of GT against bbox)
+
+
+    Compute IoU of GT against modified Bboxes PER FRAME NUMBER:
+
+    # TODO: Add dependency on frame number
+    # FIRST CASE:
+    #   GT against GT (we expect excellent result)
+    iou_original = list()
+
+    for b, box in enumerate(df_gt):
+        iou_original.append(u.bbox_iou(df_gt[b], df_gt[b]))
+
+    # SECOND CASE:
+    #   GT against noisy bboxes (we know the correspondance of GT against bbox)
+    iou_noisy = list()
+
+    for b, box in enumerate(df_gt):
+        iou_noisy.append(u.bbox_iou(df_gt[b], bboxes[b]))
+
+    # THIRD CASE:
+    #   GT against destroyed / added bboxes (we DON'T know the
+    #   correspondance of GT against bbox)
+    # TODO
+
+
+    Compute mAP of GT against modified bboxes PER FRAME NUMBER:
+
+
+    # TODO: Add dependency on frame number
+    # FIRST CASE:
+    #   GT against GT (we expect excellent result)
+    map_original = list()
+
+    for b, box in enumerate(df_gt):
+        map_original.append(u.mapk(df_gt[b], df_gt[b]))
+
+    # SECOND CASE:
+    #   GT against noisy bboxes (we know the correspondance of GT against bbox)
+    map_noisy = list()
+
+    for b, box in enumerate(df_gt):
+        map_noisy.append(u.mapk(df_gt[b], bboxes[b]))
+
+    # THIRD CASE:
+    #   GT against destroyed / added bboxes (we DON'T know the
+    #   correspondance of GT against bbox)
+    # TODO
+
+    """

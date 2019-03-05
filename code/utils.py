@@ -6,6 +6,7 @@ import os
 import logging
 import os
 import urllib
+import itertools
 
 # 3rd party modules
 import numpy as np
@@ -58,9 +59,9 @@ def fscore(tp, fp, fn):
     return 2 * precision(tp, fp) * recall(tp, fn) / (precision(tp, fp) + recall(tp, fn))
 
 
-def create_or_destroy_bboxes(bboxes, prob=0.5):
+def destroy_bboxes(bboxes, prob=0.5):
     """
-    Create or destroy bounding boxes based on probability value.
+    Destroy bounding boxes based on probability value.
 
     :param bboxes: List of bounding boxes
     :param prob: Probability to dump a bounding box
@@ -199,6 +200,17 @@ def bbox_iou(bbox_a, bbox_b):
 
     # Return the intersection over union value
     return iou
+
+
+def iterate_iou(bboxes_result, bboxes_gt):
+
+    iou = []
+    for bbox, gt in itertools.product(bboxes_result, bboxes_gt):
+        iou.append(bbox_iou(bbox, gt))
+
+    iou = np.asarray(iou)
+
+    return list(iou / len(iou))
 
 
 def apk(actual, predicted, k=10):
@@ -494,7 +506,7 @@ def compute_metrics(gt, img_shape, noise_size=5, noise_position=5, create_bbox_p
     """
 
     # Add noise to GT depending on noise parameter
-    bboxes = u.add_noise_to_bboxes(gt, img_shape,
+    bboxes = add_noise_to_bboxes(gt, img_shape,
                                    noise_size=True,
                                    noise_size_factor=noise_size,
                                    noise_position=True,
@@ -502,8 +514,8 @@ def compute_metrics(gt, img_shape, noise_size=5, noise_position=5, create_bbox_p
 
     # Randomly create and destroy bounding boxes depending
     # on probability parameter
-    bboxes = u.create_bboxes(bboxes, img_shape, prob=create_bbox_proba)
-    bboxes = u.destroy_bboxes(bboxes, prob=destroy_bbox_proba)
+    bboxes = create_bboxes(bboxes, img_shape, prob=create_bbox_proba)
+    bboxes = destroy_bboxes(bboxes, prob=destroy_bbox_proba)
 
 
     bboxTP, bboxFN, bboxFP = evalf.performance_accumulation_window(bboxes, gt)
@@ -513,19 +525,17 @@ def compute_metrics(gt, img_shape, noise_size=5, noise_position=5, create_bbox_p
     """
     # ToDo: Add dependency on frame number
 
-    fscore = u.fscore(bboxTP, bboxFN, bboxFP)
+    fscore_val = fscore(bboxTP, bboxFN, bboxFP)
 
     """
     Compute IoU of GT against modified Bboxes PER FRAME NUMBER:
     """
-    iou = list()
 
-    for b, box in enumerate(gt):
-        iou.append(u.bbox_iou(bboxes[b], gt[b]))
+    iou = iterate_iou(bboxes, gt)
 
     """
     Compute mAP of GT against modified bboxes PER FRAME NUMBER:
     """
-    map = u.mapk(bboxes, gt, k)
+    map = mapk(bboxes, gt, k)
 
-    return (bboxes, fscore, iou, map)
+    return (bboxes, fscore_val, iou, map)
