@@ -49,6 +49,17 @@ def recall(tp, fn):
     """
     return tp / (tp + fn)
 
+def fscore(tp, fp, fn):
+    """
+    Computes fscore.
+
+    :param tp: True positives
+    :param fp: False positives
+    :param fn: False negatives
+    :return: F-score
+    """
+    return 2 * precision(tp, fp) * recall(tp, fn) / (precision(tp, fp) + recall(tp, fn))
+
 
 def create_or_destroy_bboxes(bboxes, prob=0.5):
     """

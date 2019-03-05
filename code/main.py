@@ -55,6 +55,17 @@ if __name__ == '__main__':
     bboxes = u.destroy_bboxes(bboxes, prob=0.5)
 
     """
+    Obtain TP, FP, TN metrics
+    """
+
+    #ToDo: Vary 'bbox candidates' between the original gt, noisy gt, and randmomly created bboxes.
+
+    window_candidates = df_gt # Original case
+    window_candidates = bboxes # Noisy case
+
+    [bboxTP, bboxFN, bboxFP] = evalf.performance_accumulation_window(window_candidates, df_gt)
+
+    """
     Compute F-score of GT against modified bboxes PER FRAME NUMBER
     """
     # ToDo: Add dependency on frame number
