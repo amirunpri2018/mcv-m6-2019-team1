@@ -10,12 +10,15 @@ import time
 # 3rd party modules
 import matplotlib as plt
 import numpy as np
+import pandas as pd
 
 # Local modules
 import utils as u
 
 
 # Logger setup
+from code.evaluation.evaluation_funcs import performance_accumulation_window
+
 logging.basicConfig(
     # level=logging.DEBUG,
     level=logging.INFO,
@@ -36,11 +39,32 @@ IMG_SHAPE = (1080, 1920)
 
 
 if __name__ == '__main__':
+    # List of DataFrames
+    df = list()
+    for d in os.listdir(os.path.join(ROOT_DIR, 'annotation_pascal')):
+        # Get XML files from directory
+        files = u.get_files_from_dir(
+            os.path.join(ROOT_DIR, 'annotation_pascal', d),
+            excl_ext='txt')
+        # Obtain DataFrame from files
+        df.append(u.get_bboxes_from_pascal(files, d))
+    df = pd.concat(df)
+
     # Get XML list from directory
     xml_gt = u.get_files_from_dir(TRAIN_DIR_GT)
 
     # Get GT from XML
     df_gt = u.get_bboxes_from_aicity(xml_gt)
+
+    # NEW WAY TO COMPUTE IT!!
+
+    bboxes, fscore, iou, map = u.compute_metrics(df_gt, IMG_SHAPE,
+                                               noise_size=5,
+                                               noise_position=5,
+                                               create_bbox_proba=0.5,
+                                               destroy_bbox_proba=0.5,
+                                               k=10)
+    # OLD WAY TO COMPUTE IT!!
 
     # Add noise to GT depending on noise parameter
     bboxes = u.add_noise_to_bboxes(df_gt, IMG_SHAPE,
@@ -53,6 +77,17 @@ if __name__ == '__main__':
     # on probability parameter
     bboxes = u.create_bboxes(bboxes, IMG_SHAPE, prob=0.5)
     bboxes = u.destroy_bboxes(bboxes, prob=0.5)
+
+    """
+    Obtain TP, FP, TN metrics
+    """
+
+    #ToDo: Vary 'bbox candidates' between the original gt, noisy gt, and randmomly created bboxes.
+
+    window_candidates = df_gt # Original case
+    window_candidates = bboxes # Noisy case
+
+    [bboxTP, bboxFN, bboxFP] = performance_accumulation_window(window_candidates, df_gt)
 
     """
     Compute F-score of GT against modified bboxes PER FRAME NUMBER

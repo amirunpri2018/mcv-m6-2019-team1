@@ -1,7 +1,7 @@
 <annotation>
 	<folder>team1</folder>
 	<filename>frame_314.png</filename>
-	<path>/home/agus/repos/labelImg-master_2/labelImg-master/save_car_2/frame_314.png</path>
+	<path>/home/agus/repos/labelImg-master_2/labelImg-master/save_car_1/frame_314.png</path>
 	<source>
 		<database>Unknown</database>
 	</source>
@@ -15,12 +15,12 @@
 		<name>car</name>
 		<pose>Unspecified</pose>
 		<truncated>0</truncated>
-		<difficult>1</difficult>
+		<difficult>0</difficult>
 		<bndbox>
-			<xmin>562</xmin>
-			<ymin>55</ymin>
-			<xmax>618</xmax>
-			<ymax>105</ymax>
+			<xmin>851</xmin>
+			<ymin>95</ymin>
+			<xmax>955</xmax>
+			<ymax>171</ymax>
 		</bndbox>
 	</object>
 </annotation>

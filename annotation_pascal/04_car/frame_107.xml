@@ -1,0 +1,26 @@
+<annotation>
+	<folder>frames</folder>
+	<filename>frame_107.jpg</filename>
+	<path>/home/noamor/Documents/repo/m6/m6_week1_frames/frames/frame_107.jpg</path>
+	<source>
+		<database>Unknown</database>
+	</source>
+	<size>
+		<width>1920</width>
+		<height>1080</height>
+		<depth>3</depth>
+	</size>
+	<segmented>0</segmented>
+	<object>
+		<name>car</name>
+		<pose>Unspecified</pose>
+		<truncated>0</truncated>
+		<difficult>0</difficult>
+		<bndbox>
+			<xmin>671</xmin>
+			<ymin>50</ymin>
+			<xmax>773</xmax>
+			<ymax>89</ymax>
+		</bndbox>
+	</object>
+</annotation>

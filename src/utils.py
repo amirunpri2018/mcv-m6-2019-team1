@@ -1,3 +1,5 @@
+import xml
+import os
 # -*- coding: utf-8 -*-
 
 # Built-in modules
@@ -47,19 +49,20 @@ def recall(tp, fn):
 
 def fscore(tp, fp, fn):
     """
-    Computes f1-score.
+    Computes fscore.
 
     :param tp: True positives
     :param fp: False positives
     :param fn: False negatives
-    :return: f1-score
+    :return: F-score
     """
-    return 2 * precision(tp, fp) * recall(tp, fn) / (precision(tp, fp) + recall(tp, fn))
+    return 2 * precision(tp, fp) * recall(tp, fn) / (
+                precision(tp, fp) + recall(tp, fn))
 
 
-def destroy_bboxes(bboxes, prob=0.5):
+def create_or_destroy_bboxes(bboxes, prob=0.5):
     """
-    Destroy bounding boxes based on probability value.
+    Create or destroy bounding boxes based on probability value.
 
     :param bboxes: List of bounding boxes
     :param prob: Probability to dump a bounding box
@@ -104,16 +107,15 @@ def add_noise_to_bboxes(bboxes, shape, noise_size=True, noise_size_factor=5.0,
                         noise_position=True, noise_position_factor=5.0):
     """
     Add noise to a list of bounding boxes.
-    
+
     Format of the bboxes is [[tly, tlx, bry, brx], ...], where tl and br
     indicate top-left and bottom-right corners of the bbox respectively.
-    
+
     :param bboxes: List of bounding boxes
-    :param shape: Image shape
     :param noise_size: Flag to add noise to the bounding box size
     :param noise_size_factor: Factor noise in bounding box size
     :param noise_position: Flag to add noise to the bounding box position
-    :param noise_position_factor: Factor noise in bounding box position 
+    :param noise_position_factor: Factor noise in bounding box position
     :return: List of noisy bounding boxes
     """
     # If there is only one bounding box, change to a list
@@ -221,7 +223,7 @@ def apk(actual, predicted, k=10):
     for i, p in enumerate(predicted):
         if p in actual and p not in predicted[:i]:
             num_hits += 1.0
-            score += num_hits / (i+1.0)
+            score += num_hits / (i + 1.0)
 
     if not actual:
         return 0.0
@@ -275,8 +277,10 @@ def create_aicity_xml_file(fname, dataframe):
     add_tag(soup.meta.task, 'overlap', tag_value=5)
     add_tag(soup.meta.task, 'bugtracker')
     add_tag(soup.meta.task, 'flipped', tag_value=False)
-    add_tag(soup.meta.task, 'created', tag_value='2019-02-26 14:46:50.754264+03:00')
-    add_tag(soup.meta.task, 'updated', tag_value='2019-02-26 15:58:28.473275+03:00')
+    add_tag(soup.meta.task, 'created',
+            tag_value='2019-02-26 14:46:50.754264+03:00')
+    add_tag(soup.meta.task, 'updated',
+            tag_value='2019-02-26 15:58:28.473275+03:00')
     add_tag(soup.meta.task, 'source', tag_value='vdo.avi')
     # TODO
     add_tag(soup.meta.task, 'labels')
@@ -367,7 +371,8 @@ def get_bboxes_from_pascal(fnames, track_id):
         object_tag = soup.find('object')
 
         attrs = {
-            'frame': int(soup.find('filename').string.split('_')[1].split('.')[0]),
+            'frame': int(
+                soup.find('filename').string.split('_')[1].split('.')[0]),
             'occlusion': int(object_tag.find('difficult').string),
             'track_id': track_id
         }
@@ -391,17 +396,44 @@ def get_files_from_dir(directory, excl_ext=None):
     :return: List of files in directory
     """
 
-    logger.debug("Getting files in '{path}'".format(path=os.path.abspath(directory)))
+    logger.debug(
+        "Getting files in '{path}'".format(path=os.path.abspath(directory)))
 
     excl_ext = list() if excl_ext is None else excl_ext
 
     l = [
         os.path.join(directory, f) for f in os.listdir(directory)
-        if os.path.isfile(os.path.join(directory, f)) and f.split('.')[-1] not in excl_ext
+        if os.path.isfile(os.path.join(directory, f)) and f.split('.')[
+            -1] not in excl_ext
     ]
-    logger.debug("Retrieving {num_files} files from '{path}'".format(num_files=len(l), path=os.path.abspath(directory)))
+
+    logger.debug("Retrieving {num_files} files from '{path}'".format(
+        num_files=len(l),
+        path=os.path.abspath(directory)))
 
     return l
+
+
+def readOF(OFdir, filename):
+    """
+    Reading Optical flow files
+    0 Dim validation
+    1 Dim u
+    2 Dim v
+    """
+    # Sequance 1
+    OF_path = os.path.join(OFdir, filename)
+    OF = cv.imread(gt1_path, -1)
+    u = (OF[:, :, 1].ravel() - 2 ** 15) / 64.0
+    v = (OF[:, :, 2].ravel() - 2 ** 15) / 64.0
+    valid_OF = OF[:, :, 0].ravel()
+    u = np.multiply(u, valid_OF)
+    v = np.multiply(v, valid_OF)
+    return u, v
+
+
+def plotOF(img, u, v):
+    mag, ang = cv.cartToPolar(u, v)
 
 
 def mse(image_a, image_b):
@@ -481,7 +513,8 @@ def non_max_suppression(bboxes, overlap_thresh):
         overlap = (w * h) / area[idxs[:last]]
 
         # Delete all indexes from the index list that have
-        idxs = np.delete(idxs, np.concatenate(([last], np.where(overlap_thresh < overlap)[0])))
+        idxs = np.delete(idxs, np.concatenate(
+            ([last], np.where(overlap_thresh < overlap)[0])))
 
     # Return only the bounding boxes that were picked using the integer data type
     return bboxes[pick].astype("int")
@@ -507,3 +540,56 @@ def histogram(im_array, bins=128):
         bin_centers.append(_bin_centers)
 
     return hist, bin_centers
+
+
+def compute_metrics(gt, img_shape, noise_size=5, noise_position=5,
+                    create_bbox_proba=0.5, destroy_bbox_proba=0.5, k=10):
+    """
+    1. Add noise to ground truth Bounding Boxes.
+    2.Compute Fscore, IoU, Map of two lists of Bounding Boxes.
+
+    :param gt: list of GT bounding boxes
+    :param img_shape: Original image shape
+    :param noise_size: Change bbox size param
+    :param noise_position: Increase bbox size param
+    :param destroy_bbox_proba: Proba of destroying Bboxes
+    :param create_bbox_proba: Proba of creating Bboxes
+    :param k: Map at k
+    :return: Noisy Bboxes, Fscore, IoU, MaP
+    """
+
+    # Add noise to GT depending on noise parameter
+    bboxes = u.add_noise_to_bboxes(gt, img_shape,
+                                   noise_size=True,
+                                   noise_size_factor=noise_size,
+                                   noise_position=True,
+                                   noise_position_factor=noise_position)
+
+    # Randomly create and destroy bounding boxes depending
+    # on probability parameter
+    bboxes = u.create_bboxes(bboxes, img_shape, prob=create_bbox_proba)
+    bboxes = u.destroy_bboxes(bboxes, prob=destroy_bbox_proba)
+
+    bboxTP, bboxFN, bboxFP = evalf.performance_accumulation_window(bboxes, gt)
+
+    """
+    Compute F-score of GT against modified bboxes PER FRAME NUMBER
+    """
+    # ToDo: Add dependency on frame number
+
+    fscore = u.fscore(bboxTP, bboxFN, bboxFP)
+
+    """
+    Compute IoU of GT against modified Bboxes PER FRAME NUMBER:
+    """
+    iou = list()
+
+    for b, box in enumerate(gt):
+        iou.append(u.bbox_iou(bboxes[b], gt[b]))
+
+    """
+    Compute mAP of GT against modified bboxes PER FRAME NUMBER:
+    """
+    map = u.mapk(bboxes, gt, k)
+
+    return (bboxes, fscore, iou, map)
