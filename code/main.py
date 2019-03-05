@@ -16,6 +16,8 @@ import utils as u
 
 
 # Logger setup
+from code.evaluation.evaluation_funcs import performance_accumulation_window
+
 logging.basicConfig(
     # level=logging.DEBUG,
     level=logging.INFO,
@@ -42,6 +44,16 @@ if __name__ == '__main__':
     # Get GT from XML
     df_gt = u.get_bboxes_from_aicity(xml_gt)
 
+    # NEW WAY TO COMPUTE IT!!
+
+    bboxes, fscore, iou, map = u.compute_metrics(df_gt, IMG_SHAPE,
+                                               noise_size=5,
+                                               noise_position=5,
+                                               create_bbox_proba=0.5,
+                                               destroy_bbox_proba=0.5,
+                                               k=10)
+    # OLD WAY TO COMPUTE IT!!
+
     # Add noise to GT depending on noise parameter
     bboxes = u.add_noise_to_bboxes(df_gt, IMG_SHAPE,
                                    noise_size=True,
@@ -63,7 +75,7 @@ if __name__ == '__main__':
     window_candidates = df_gt # Original case
     window_candidates = bboxes # Noisy case
 
-    [bboxTP, bboxFN, bboxFP] = evalf.performance_accumulation_window(window_candidates, df_gt)
+    [bboxTP, bboxFN, bboxFP] = performance_accumulation_window(window_candidates, df_gt)
 
     """
     Compute F-score of GT against modified bboxes PER FRAME NUMBER
