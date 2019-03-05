@@ -1,9 +1,26 @@
+# -*- coding: utf-8 -*-
+
+# Built-in modules
+import logging
+import os
 import urllib
 
-from bs4 import BeautifulSoup
-
+# 3rd party modules
 import numpy as np
 import pandas as pd
+
+from bs4 import BeautifulSoup
+from skimage import exposure
+
+# Local modules
+
+# Logger setup
+logging.basicConfig(
+    # level=logging.DEBUG,
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+)
+logger = logging.getLogger(__name__)
 
 
 def precision(tp, fp):
@@ -28,9 +45,21 @@ def recall(tp, fn):
     return tp / (tp + fn)
 
 
-def create_or_destroy_bboxes(bboxes, prob=0.5):
+def fscore(tp, fp, fn):
     """
-    Create or destroy bounding boxes based on probability value.
+    Computes f1-score.
+
+    :param tp: True positives
+    :param fp: False positives
+    :param fn: False negatives
+    :return: f1-score
+    """
+    return 2 * precision(tp, fp) * recall(tp, fn) / (precision(tp, fp) + recall(tp, fn))
+
+
+def destroy_bboxes(bboxes, prob=0.5):
+    """
+    Destroy bounding boxes based on probability value.
 
     :param bboxes: List of bounding boxes
     :param prob: Probability to dump a bounding box
@@ -46,6 +75,26 @@ def create_or_destroy_bboxes(bboxes, prob=0.5):
 
     return final_bboxes
 
+def create_bboxes(bboxes, shape, prob=0.5):
+    """
+    Create bounding boxes based on probability value.
+
+    :param bboxes: List of bounding boxes
+    :param prob: Probability to create a bounding box
+    :return: List of bounding boxes
+    """
+
+    if not isinstance(bboxes, list):
+        bboxes = list(bboxes)
+
+    for bbox in bboxes:
+        if prob < np.random.random():
+            new_bbox = add_noise_to_bboxes(bbox, shape, noise_size=True, noise_size_factor=30.0,
+                        noise_position=True, noise_position_factor=30.0)
+            bboxes.append(new_bbox)
+
+    return bboxes
+
 
 def add_noise_to_bboxes(bboxes, shape, noise_size=True, noise_size_factor=5.0,
                         noise_position=True, noise_position_factor=5.0):
@@ -56,6 +105,7 @@ def add_noise_to_bboxes(bboxes, shape, noise_size=True, noise_size_factor=5.0,
     indicate top-left and bottom-right corners of the bbox respectively.
     
     :param bboxes: List of bounding boxes
+    :param shape: Image shape
     :param noise_size: Flag to add noise to the bounding box size
     :param noise_size_factor: Factor noise in bounding box size
     :param noise_position: Flag to add noise to the bounding box position
@@ -290,3 +340,131 @@ def get_bboxes_from_aicity(fname):
 
     # Return DataFrame
     return pd.DataFrame(bboxes)
+
+
+def get_files_from_dir(directory, excl_ext=None):
+    """
+    Get only files from directory.
+
+    :param directory: Directory path
+    :param excl_ext: List with extensions to exclude
+    :return: List of files in directory
+    """
+
+    logger.debug("Getting files in '{path}'".format(path=os.path.abspath(directory)))
+
+    excl_ext = list() if excl_ext is None else excl_ext
+
+    l = [
+        f for f in os.listdir(directory)
+        if os.path.isfile(os.path.join(directory, f)) and f.split('.')[-1] not in excl_ext
+    ]
+    logger.debug("Retrieving {num_files} files from '{path}'".format(num_files=len(l), path=os.path.abspath(directory)))
+
+    return l
+
+def bbox_from_xml(xml_file):
+    ''' Function that reads Xml file and outputs Pandas with format:
+     Bbox [xtl ytl xbr ybr], frame number, track number)'''
+
+    pass
+
+
+def mse(imageA, imageB):
+    # the 'Mean Squared Error' between the two images is the
+    # sum of the squared difference between the two images;
+    # NOTE: the two images must have the same dimension
+    err = np.sum((imageA.astype("float") - imageB.astype("float")) ** 2)
+    err /= float(imageA.shape[0] * imageA.shape[1])
+
+    # return the MSE, the lower the error, the more "similar"
+    # the two images are
+    return err
+
+
+
+def non_max_suppression(bboxes, overlap_thresh):
+    """
+    Malisiewicz et al. method for non-maximum suppression.
+
+    :param bboxes: List with bounding boxes
+    :param overlap_thresh: Overlaping threshold
+    :return: List of merger bounding boxes
+    """
+
+    bboxes = np.array(bboxes)
+
+    # If there are no boxes, return an empty list
+    if len(bboxes) == 0:
+        return []
+
+    # If the bounding boxes integers, convert them to floats
+    # This is important since we'll be doing a bunch of divisions
+    if bboxes.dtype.kind == "i":
+        bboxes = bboxes.astype("float")
+
+    # Initialize the list of picked indexes
+    pick = []
+
+    # Grab the coordinates of the bounding boxes
+    x1 = bboxes[:, 0]
+    y1 = bboxes[:, 1]
+    x2 = bboxes[:, 2]
+    y2 = bboxes[:, 3]
+
+    # Compute the area of the bounding boxes and sort the bounding
+    # boxes by the bottom-right y-coordinate of the bounding box
+    area = (x2 - x1 + 1) * (y2 - y1 + 1)
+    idxs = np.argsort(y2)
+
+    # Keep looping while some indexes still remain in the indexes
+    # list
+    while 0 < len(idxs):
+        # Grab the last index in the indexes list and add the
+        # index value to the list of picked indexes
+        last = len(idxs) - 1
+        i = idxs[last]
+        pick.append(i)
+
+        # Find the largest (x, y) coordinates for the start of
+        # the bounding box and the smallest (x, y) coordinates
+        # for the end of the bounding box
+        xx1 = np.maximum(x1[i], x1[idxs[:last]])
+        yy1 = np.maximum(y1[i], y1[idxs[:last]])
+        xx2 = np.minimum(x2[i], x2[idxs[:last]])
+        yy2 = np.minimum(y2[i], y2[idxs[:last]])
+
+        # Compute the width and height of the bounding box
+        w = np.maximum(0, xx2 - xx1 + 1)
+        h = np.maximum(0, yy2 - yy1 + 1)
+
+        # Compute the ratio of overlap
+        overlap = (w * h) / area[idxs[:last]]
+
+        # Delete all indexes from the index list that have
+        idxs = np.delete(idxs, np.concatenate(([last], np.where(overlap_thresh < overlap)[0])))
+
+    # Return only the bounding boxes that were picked using the integer data type
+    return bboxes[pick].astype("int")
+
+
+def histogram(im_array, bins=128):
+    """
+    This function returns the centers of bins and does not rebin integer arrays. For integer arrays,
+    each integer value has its own bin, which improves speed and intensity-resolution.
+
+    This funcion support multi channel images, returning a list of histogram and bin centers for
+    each channel.
+
+    :param im_array: Numpy array representation of an image
+    :param bins: Number of bins of the histogram
+    :return: List of histograms and bin centers for each channel
+    """
+
+    hist, bin_centers = list(), list()
+    for i in range(im_array.shape[2]):
+        _hist, _bin_centers = exposure.histogram(im_array[..., i], bins)
+        hist.append(_hist)
+        bin_centers.append(_bin_centers)
+
+    return hist, bin_centers
