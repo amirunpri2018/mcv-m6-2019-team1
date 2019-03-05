@@ -75,6 +75,7 @@ def destroy_bboxes(bboxes, prob=0.5):
 
     return final_bboxes
 
+
 def create_bboxes(bboxes, shape, prob=0.5):
     """
     Create bounding boxes based on probability value.
@@ -89,8 +90,11 @@ def create_bboxes(bboxes, shape, prob=0.5):
 
     for bbox in bboxes:
         if prob < np.random.random():
-            new_bbox = add_noise_to_bboxes(bbox, shape, noise_size=True, noise_size_factor=30.0,
-                        noise_position=True, noise_position_factor=30.0)
+            new_bbox = add_noise_to_bboxes(bbox, shape,
+                                           noise_size=True,
+                                           noise_size_factor=30.0,
+                                           noise_position=True,
+                                           noise_position_factor=30.0)
             bboxes.append(new_bbox)
 
     return bboxes
@@ -259,7 +263,7 @@ def add_tag(parent, tag_name, tag_value=None, tag_attrs=None):
     parent.annotations.append(tag)
 
 
-def create_aicity_xml(fname, dataframe):
+def create_aicity_xml_file(fname, dataframe):
     soup = BeautifulSoup('<annotations>', 'xml')
     add_tag(soup, 'version', tag_value='1.1')
     add_tag(soup, 'meta')
@@ -363,24 +367,24 @@ def get_files_from_dir(directory, excl_ext=None):
 
     return l
 
-def bbox_from_xml(xml_file):
-    ''' Function that reads Xml file and outputs Pandas with format:
-     Bbox [xtl ytl xbr ybr], frame number, track number)'''
 
-    pass
+def mse(image_a, image_b):
+    """
+    Compute the Mean Squared Error between two images.
 
+    The MSE is the sum of the squared difference between the two images.
 
-def mse(imageA, imageB):
-    # the 'Mean Squared Error' between the two images is the
-    # sum of the squared difference between the two images;
-    # NOTE: the two images must have the same dimension
-    err = np.sum((imageA.astype("float") - imageB.astype("float")) ** 2)
-    err /= float(imageA.shape[0] * imageA.shape[1])
+    :param image_a:
+    :param image_b:
+    :return:
+    """
+    if image_a.shape != image_b.shape:
+        raise ValueError('Images must have the same dimensions')
 
-    # return the MSE, the lower the error, the more "similar"
-    # the two images are
+    err = np.sum((image_a.astype("float") - image_b.astype("float")) ** 2)
+    err /= float(image_a.shape[0] * image_a.shape[1])
+
     return err
-
 
 
 def non_max_suppression(bboxes, overlap_thresh):
@@ -396,7 +400,7 @@ def non_max_suppression(bboxes, overlap_thresh):
 
     # If there are no boxes, return an empty list
     if len(bboxes) == 0:
-        return []
+        return list()
 
     # If the bounding boxes integers, convert them to floats
     # This is important since we'll be doing a bunch of divisions
@@ -404,7 +408,7 @@ def non_max_suppression(bboxes, overlap_thresh):
         bboxes = bboxes.astype("float")
 
     # Initialize the list of picked indexes
-    pick = []
+    pick = list()
 
     # Grab the coordinates of the bounding boxes
     x1 = bboxes[:, 0]
@@ -417,8 +421,7 @@ def non_max_suppression(bboxes, overlap_thresh):
     area = (x2 - x1 + 1) * (y2 - y1 + 1)
     idxs = np.argsort(y2)
 
-    # Keep looping while some indexes still remain in the indexes
-    # list
+    # Keep looping while some indexes still remain in the indexes list
     while 0 < len(idxs):
         # Grab the last index in the indexes list and add the
         # index value to the list of picked indexes

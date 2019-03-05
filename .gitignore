@@ -105,12 +105,8 @@ venv.bak/
 
 # Frames in dataset
 datasets/m6_week1_frames/
-<<<<<<< HEAD
 
+.idea/
 devnull/
-=======
 annotation_pascal/from_frame_176
 code/tests.ipynb
-
-devnull/
->>>>>>> 2957e29757db5c4becb98025d7c80fc72afbe2e0
