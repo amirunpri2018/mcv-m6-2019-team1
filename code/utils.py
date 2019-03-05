@@ -1,7 +1,5 @@
-<<<<<<< HEAD
 import xml
 import os
-=======
 # -*- coding: utf-8 -*-
 
 # Built-in modules
@@ -10,7 +8,6 @@ import os
 import urllib
 
 # 3rd party modules
->>>>>>> 7886cb4c760190bbf5ab7a4b66d692ada05166b6
 import numpy as np
 import pandas as pd
 
@@ -79,8 +76,7 @@ def create_or_destroy_bboxes(bboxes, prob=0.5):
 
     return final_bboxes
 
-<<<<<<< HEAD
-=======
+
 
 def create_bboxes(bboxes, shape, prob=0.5):
     """
@@ -105,7 +101,6 @@ def create_bboxes(bboxes, shape, prob=0.5):
 
     return bboxes
 
->>>>>>> 7886cb4c760190bbf5ab7a4b66d692ada05166b6
 
 def add_noise_to_bboxes(bboxes, shape, noise_size=True, noise_size_factor=5.0,
                         noise_position=True, noise_position_factor=5.0):
