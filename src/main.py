@@ -10,6 +10,7 @@ import time
 # 3rd party modules
 import matplotlib as plt
 import numpy as np
+import pandas as pd
 
 # Local modules
 import utils as u
@@ -38,6 +39,17 @@ IMG_SHAPE = (1080, 1920)
 
 
 if __name__ == '__main__':
+    # List of DataFrames
+    df = list()
+    for d in os.listdir(os.path.join(ROOT_DIR, 'annotation_pascal')):
+        # Get XML files from directory
+        files = u.get_files_from_dir(
+            os.path.join(ROOT_DIR, 'annotation_pascal', d),
+            excl_ext='txt')
+        # Obtain DataFrame from files
+        df.append(u.get_bboxes_from_pascal(files, d))
+    df = pd.concat(df)
+
     # Get XML list from directory
     xml_gt = u.get_files_from_dir(TRAIN_DIR_GT)
 

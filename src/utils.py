@@ -9,10 +9,10 @@ import urllib
 import itertools
 
 # 3rd party modules
+import bs4
 import numpy as np
 import pandas as pd
 
-from bs4 import BeautifulSoup
 from skimage import exposure
 
 # Local modules
@@ -47,6 +47,7 @@ def recall(tp, fn):
     """
     return tp / (tp + fn)
 
+
 def fscore(tp, fp, fn):
     """
     Computes fscore.
@@ -56,7 +57,8 @@ def fscore(tp, fp, fn):
     :param fn: False negatives
     :return: F-score
     """
-    return 2 * precision(tp, fp) * recall(tp, fn) / (precision(tp, fp) + recall(tp, fn))
+    return 2 * precision(tp, fp) * recall(tp, fn) / (
+                precision(tp, fp) + recall(tp, fn))
 
 
 def destroy_bboxes(bboxes, prob=0.5):
@@ -76,7 +78,6 @@ def destroy_bboxes(bboxes, prob=0.5):
             final_bboxes.append(bbox)
 
     return final_bboxes
-
 
 
 def create_bboxes(bboxes, shape, prob=0.5):
@@ -234,7 +235,7 @@ def apk(actual, predicted, k=10):
     for i, p in enumerate(predicted):
         if p in actual and p not in predicted[:i]:
             num_hits += 1.0
-            score += num_hits / (i+1.0)
+            score += num_hits / (i + 1.0)
 
     if not actual:
         return 0.0
@@ -277,7 +278,7 @@ def add_tag(parent, tag_name, tag_value=None, tag_attrs=None):
 
 
 def create_aicity_xml_file(fname, dataframe):
-    soup = BeautifulSoup('<annotations>', 'xml')
+    soup = bs4.BeautifulSoup('<annotations>', 'xml')
     add_tag(soup, 'version', tag_value='1.1')
     add_tag(soup, 'meta')
     add_tag(soup.meta, 'task')
@@ -288,8 +289,10 @@ def create_aicity_xml_file(fname, dataframe):
     add_tag(soup.meta.task, 'overlap', tag_value=5)
     add_tag(soup.meta.task, 'bugtracker')
     add_tag(soup.meta.task, 'flipped', tag_value=False)
-    add_tag(soup.meta.task, 'created', tag_value='2019-02-26 14:46:50.754264+03:00')
-    add_tag(soup.meta.task, 'updated', tag_value='2019-02-26 15:58:28.473275+03:00')
+    add_tag(soup.meta.task, 'created',
+            tag_value='2019-02-26 14:46:50.754264+03:00')
+    add_tag(soup.meta.task, 'updated',
+            tag_value='2019-02-26 15:58:28.473275+03:00')
     add_tag(soup.meta.task, 'source', tag_value='vdo.avi')
     # TODO
     add_tag(soup.meta.task, 'labels')
@@ -335,32 +338,95 @@ def read_xml(xml_fname):
     :return: BeautifulSoup object
     """
     xml_doc = urllib.urlopen(xml_fname)
-    return BeautifulSoup(xml_doc.read(), features='xml')
+    return bs4.BeautifulSoup(xml_doc.read(), features='xml')
 
 
-def get_bboxes_from_aicity(fname):
+def get_bboxes_from_aicity(fnames):
     """
     Get bounding boxes from AICity XML-like file.
 
-    :param fname: XML filename
+    :param fname: List XML filename
     :return: Pandas DataFrame with the data
     """
-    # Read file
-    soup = read_xml(fname)
-    # Get parent tag of bounding boxes
-    bboxes_tag = soup.find('track')
+    if not isinstance(fnames, list):
+        fnames = [fnames]
 
     bboxes = list()
-    # Iterate over bounding boxes and append the attributes to the list
-    for child in bboxes_tag.find_all('box'):
-        bboxes.append(child.attrs)
+    for fname in fnames:
+        # Read file
+        soup = read_xml(fname)
+        # Get parent tag of bounding boxes
+        bboxes_tag = soup.find('track')
+        # Iterate over bounding boxes and append the attributes to the list
+        for child in bboxes_tag.find_all('box'):
+            bboxes.append(child.attrs)
 
     # Return DataFrame
     return pd.DataFrame(bboxes)
 
 
+def get_bboxes_from_pascal(fnames, track_id):
+    """
+    Get bounding boxes from Pascal XML-like file.
 
-def readOF(OFdir,filename):
+    :param fname: List XML filename
+    :return: Pandas DataFrame with the data
+    """
+    if not isinstance(fnames, list):
+        fnames = [fnames]
+
+    bboxes = list()
+    for fname in fnames:
+        # Read file
+        soup = read_xml(fname)
+        # Get parent tag of bounding boxes
+        object_tag = soup.find('object')
+
+        attrs = {
+            'frame': int(
+                soup.find('filename').string.split('_')[1].split('.')[0]),
+            'occlusion': int(object_tag.find('difficult').string),
+            'track_id': track_id
+        }
+
+        # Iterate over bounding boxes and append the attributes to the list
+        for child in object_tag.find('bndbox').children:
+            if isinstance(child, bs4.element.Tag):
+                attrs[child.name] = float(child.string)
+        bboxes.append(attrs)
+
+    # Return DataFrame
+    return pd.DataFrame(bboxes)
+
+
+def get_files_from_dir(directory, excl_ext=None):
+    """
+    Get only files from directory.
+
+    :param directory: Directory path
+    :param excl_ext: List with extensions to exclude
+    :return: List of files in directory
+    """
+
+    logger.debug(
+        "Getting files in '{path}'".format(path=os.path.abspath(directory)))
+
+    excl_ext = list() if excl_ext is None else excl_ext
+
+    l = [
+        os.path.join(directory, f) for f in os.listdir(directory)
+        if os.path.isfile(os.path.join(directory, f)) and f.split('.')[
+            -1] not in excl_ext
+    ]
+
+    logger.debug("Retrieving {num_files} files from '{path}'".format(
+        num_files=len(l),
+        path=os.path.abspath(directory)))
+
+    return l
+
+
+def readOF(OFdir, filename):
     """
     Reading Optical flow files
     0 Dim validation
@@ -368,18 +434,18 @@ def readOF(OFdir,filename):
     2 Dim v
     """
     # Sequance 1
-    OF_path = os.path.join(OFdir ,filename)
-    OF = cv.imread(gt1_path,-1)
-    u = (OF[:,:,1].ravel()-2**15) / 64.0
-    v = (OF[:,:,2].ravel()-2**15) / 64.0
-    valid_OF = OF[:,:,0].ravel()
+    OF_path = os.path.join(OFdir, filename)
+    OF = cv.imread(gt1_path, -1)
+    u = (OF[:, :, 1].ravel() - 2 ** 15) / 64.0
+    v = (OF[:, :, 2].ravel() - 2 ** 15) / 64.0
+    valid_OF = OF[:, :, 0].ravel()
+    u = np.multiply(u, valid_OF)
+    v = np.multiply(v, valid_OF)
+    return u, v
 
-    u = np.multiply(u,valid_OF)
-    v = np.multiply(v,valid_OF)
-    return u ,v
 
 def plotOF(img, u, v):
-    mag, ang = cv.cartToPolar(u,v)
+    mag, ang = cv.cartToPolar(u, v)
 
 
 def mse(image_a, image_b):
@@ -459,7 +525,8 @@ def non_max_suppression(bboxes, overlap_thresh):
         overlap = (w * h) / area[idxs[:last]]
 
         # Delete all indexes from the index list that have
-        idxs = np.delete(idxs, np.concatenate(([last], np.where(overlap_thresh < overlap)[0])))
+        idxs = np.delete(idxs, np.concatenate(
+            ([last], np.where(overlap_thresh < overlap)[0])))
 
     # Return only the bounding boxes that were picked using the integer data type
     return bboxes[pick].astype("int")
@@ -487,10 +554,8 @@ def histogram(im_array, bins=128):
     return hist, bin_centers
 
 
-
-
-def compute_metrics(gt, img_shape, noise_size=5, noise_position=5, create_bbox_proba=0.5, destroy_bbox_proba=0.5, k=10):
-
+def compute_metrics(gt, img_shape, noise_size=5, noise_position=5,
+                    create_bbox_proba=0.5, destroy_bbox_proba=0.5, k=10):
     """
     1. Add noise to ground truth Bounding Boxes.
     2.Compute Fscore, IoU, Map of two lists of Bounding Boxes.
@@ -516,7 +581,6 @@ def compute_metrics(gt, img_shape, noise_size=5, noise_position=5, create_bbox_p
     # on probability parameter
     bboxes = create_bboxes(bboxes, img_shape, prob=create_bbox_proba)
     bboxes = destroy_bboxes(bboxes, prob=destroy_bbox_proba)
-
 
     bboxTP, bboxFN, bboxFP = evalf.performance_accumulation_window(bboxes, gt)
 
