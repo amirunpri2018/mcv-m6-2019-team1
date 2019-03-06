@@ -120,9 +120,11 @@ def add_noise_to_bboxes(bboxes, shape, noise_size=True, noise_size_factor=5.0,
     :param noise_position_factor: Factor noise in bounding box position
     :return: List of noisy bounding boxes
     """
+    output_bboxes = np.array(bboxes).copy()
+    output_bboxes = output_bboxes.tolist()
     # If there is only one bounding box, change to a list
-    if not isinstance(bboxes[0], list):
-        bboxes = [bboxes]
+    if not isinstance(output_bboxes[0], list):
+        output_bboxes = [output_bboxes]
 
     # If noise in position, get a random pair of values. Else, (0, 0)
     if noise_position:
@@ -139,7 +141,7 @@ def add_noise_to_bboxes(bboxes, shape, noise_size=True, noise_size_factor=5.0,
         change_size = (0, 0)
 
     # Iterate over the bounding boxes
-    for bbox in bboxes:
+    for bbox in output_bboxes:
         # If moving the bounding box in the vertical position does not exceed
         # the limits (0 and shape[0]), move the bounding box
         if not (bbox[0] + change_position[0] < 0 or
@@ -171,7 +173,7 @@ def add_noise_to_bboxes(bboxes, shape, noise_size=True, noise_size_factor=5.0,
                  bbox[i] = bbox[i] + change_size[1]
 
     # Return list of bounding boxes
-    return bboxes
+    return output_bboxes
 
 
 def bbox_iou(bbox_a, bbox_b):
