@@ -114,7 +114,7 @@ def plotOF(img1,img2, Fu, Fv, step = 20 , title_ = 'Test' ):
     ax1.set_title(title_ + ", Overlapping images")
     M = np.hypot(Fu_dn,Fv_dn)
     #Q = ax2.quiver(X,Y,Fu_dn,Fv_dn,M,units='xy' ,alpha=0.6)
-    Q = ax2.quiver(X,Y,Fu_dn,Fv_dn,M,units='xy' ,alpha=0.6)
+    Q = ax2.quiver(X,Y,Fu_dn,-Fv_dn,M,units='xy' ,alpha=0.6)
     plt.show()
     #plt.savefig('OF' + title_ + '.png')
     #cv.waitKey()

@@ -77,12 +77,12 @@ if Task_3_4:
 # read original images
     Im1 = cv.imread(img_folder+seq1,cv.IMREAD_GRAYSCALE)
     Im1_2 = cv.imread(img_folder+seq1_2,cv.IMREAD_GRAYSCALE)
-    ut.plotOF(Im1,Im1_2,u1gt,v1gt, 10,'Seq_GT_1')
+    ut.plotOF(Im1,Im1_2,u1gt,v1gt, 15,'Seq_GT_1')
 
     Im2 = cv.imread(img_folder+seq2,cv.IMREAD_GRAYSCALE)
     Im2_2 = cv.imread(img_folder+seq2_2,cv.IMREAD_GRAYSCALE)
-    ut.plotOF(Im2, Im2_2,u2gt,v2gt,10,'Seq_GT_2')
+    ut.plotOF(Im2, Im2_2,u2gt,v2gt,15,'Seq_GT_2')
 
 
-    ut.plotOF(Im1,Im1_2, u1lk,v1lk,10,'Seq_LK_1')
-    ut.plotOF(Im2, Im2_2,u2lk,v2lk,10,'Seq_LK_2')
+    ut.plotOF(Im1,Im1_2, u1lk,v1lk,15,'Seq_LK_1')
+    ut.plotOF(Im2, Im2_2,u2lk,v2lk,15,'Seq_LK_2')
