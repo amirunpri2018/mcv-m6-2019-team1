@@ -347,29 +347,6 @@ def get_bboxes_from_aicity(fname):
     return pd.DataFrame(bboxes)
 
 
-
-def readOF(OFdir,filename):
-    """
-    Reading Optical flow files
-    0 Dim validation
-    1 Dim u
-    2 Dim v
-    """
-    # Sequance 1
-    OF_path = os.path.join(OFdir ,filename)
-    OF = cv.imread(gt1_path,-1)
-    u = (OF[:,:,1].ravel()-2**15) / 64.0
-    v = (OF[:,:,2].ravel()-2**15) / 64.0
-    valid_OF = OF[:,:,0].ravel()
-
-    u = np.multiply(u,valid_OF)
-    v = np.multiply(v,valid_OF)
-    return u ,v
-
-def plotOF(img, u, v):
-    mag, ang = cv.cartToPolar(u,v)
-
-
 def mse(image_a, image_b):
     """
     Compute the Mean Squared Error between two images.
