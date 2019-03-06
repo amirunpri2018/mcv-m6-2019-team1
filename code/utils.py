@@ -14,9 +14,9 @@ import numpy as np
 import pandas as pd
 
 from skimage import exposure
-import src.evaluation.evaluation_funcs as evalf
+#import src.evaluation.evaluation_funcs as evalf
 # Local modules
-
+import xml.etree.ElementTree as ET
 # Logger setup
 logging.basicConfig(
     # level=logging.DEBUG,
@@ -34,7 +34,7 @@ def precision(tp, fp):
     :param fp: False positives
     :return: Precision
     """
-    return tp * 1.0 / (tp + fp)
+    return tp / (tp + fp)
 
 
 def recall(tp, fn):
@@ -45,7 +45,7 @@ def recall(tp, fn):
     :param fn: False negatives
     :return: Recall
     """
-    return tp * 1.0 / (tp + fn)
+    return tp / (tp + fn)
 
 
 def fscore(tp, fp, fn):
@@ -57,12 +57,8 @@ def fscore(tp, fp, fn):
     :param fn: False negatives
     :return: F-score
     """
-    p = precision(tp, fp)
-    r = recall(tp, fn)
-    try:
-        return 2 * p * r / (p + r)
-    except ZeroDivisionError:
-        return 0
+    return 2 * precision(tp, fp) * recall(tp, fn) / (
+                precision(tp, fp) + recall(tp, fn))
 
 
 def destroy_bboxes(bboxes, prob=0.5):
@@ -377,7 +373,37 @@ def get_bboxes_from_aicity(fnames):
     # Return DataFrame
     return pd.DataFrame(bboxes)
 
+def get_bboxes_from_MOTChallenge(fname):
+    """
+    Get the Bboxes from the txt files
+    MOTChallengr format [frame,ID,left,top,width,height,1,-1,-1,-1]
+    fname: is the path to the txt file
+    :returns: Pandas DataFrame with the data
+    """
+    f = open(fname,"r")
+    BBox_list = list()
 
+    for line in f:
+        data = line.split(',')
+        BBox_list.append(Detection(int(data[0]), 'car', int(float(data[2])), int(float(data[3])), int(float(data[2])) + int(float(data[4])), int(float(data[3])) + int(float(data[5])),float(data[6])))
+
+    return BBox_list
+
+def write_bboxList_to_AIcity(BBox_list,filename):
+    
+    data = ET.Element('data')
+    items = ET.SubElement(data, 'items')
+    item1 = ET.SubElement(items, 'item')
+    item2 = ET.SubElement(items, 'item')
+    item1.set('name','item1')
+    item2.set('name','item2')
+    item1.text = 'item1abc'
+    item2.text = 'item2abc'
+
+    # create a new XML file with the results
+    mydata = ET.tostring(data)
+    myfile = open("items2.xml", "w")
+    myfile.write(mydata)
 def get_bboxes_from_pascal(fnames, track_id):
     """
     Get bounding boxes from Pascal XML-like file.
@@ -437,29 +463,6 @@ def get_files_from_dir(directory, excl_ext=None):
         path=os.path.abspath(directory)))
 
     return l
-
-
-def readOF(OFdir, filename):
-    """
-    Reading Optical flow files
-    0 Dim validation
-    1 Dim u
-    2 Dim v
-    """
-    # Sequance 1
-    OF_path = os.path.join(OFdir, filename)
-    OF = cv.imread(gt1_path, -1)
-    u = (OF[:, :, 1].ravel() - 2 ** 15) / 64.0
-    v = (OF[:, :, 2].ravel() - 2 ** 15) / 64.0
-    valid_OF = OF[:, :, 0].ravel()
-    u = np.multiply(u, valid_OF)
-    v = np.multiply(v, valid_OF)
-    return u, v
-
-
-def plotOF(img, u, v):
-    mag, ang = cv.cartToPolar(u, v)
-
 
 def mse(image_a, image_b):
     """
