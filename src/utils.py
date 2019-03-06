@@ -14,7 +14,7 @@ import numpy as np
 import pandas as pd
 
 from skimage import exposure
-
+import src.evaluation.evaluation_funcs as evalf
 # Local modules
 
 # Logger setup
@@ -92,16 +92,17 @@ def create_bboxes(bboxes, shape, prob=0.5):
     if not isinstance(bboxes, list):
         bboxes = list(bboxes)
 
+    new_bboxes = bboxes[:]
     for bbox in bboxes:
-        if prob < np.random.random():
+        if prob > np.random.random():
             new_bbox = add_noise_to_bboxes(bbox, shape,
                                            noise_size=True,
                                            noise_size_factor=30.0,
                                            noise_position=True,
                                            noise_position_factor=30.0)
-            bboxes.append(new_bbox)
+            new_bboxes.extend(new_bbox)
 
-    return bboxes
+    return new_bboxes
 
 
 def add_noise_to_bboxes(bboxes, shape, noise_size=True, noise_size_factor=5.0,
@@ -120,8 +121,8 @@ def add_noise_to_bboxes(bboxes, shape, noise_size=True, noise_size_factor=5.0,
     :return: List of noisy bounding boxes
     """
     # If there is only one bounding box, change to a list
-    if not (isinstance(bboxes, list) or isinstance(bboxes, np.array)):
-        bboxes = list(bboxes)
+    if not isinstance(bboxes[0], list):
+        bboxes = [bboxes]
 
     # If noise in position, get a random pair of values. Else, (0, 0)
     if noise_position:
@@ -167,7 +168,7 @@ def add_noise_to_bboxes(bboxes, shape, noise_size=True, noise_size_factor=5.0,
         for i in [1, 3]:
             if not (bbox[i] + change_size[1] < 0 or
                     shape[1] < bbox[i] + change_size[1]):
-                bbox[i] = bbox[i] + change_size[1]
+                 bbox[i] = bbox[i] + change_size[1]
 
     # Return list of bounding boxes
     return bboxes
@@ -185,19 +186,25 @@ def bbox_iou(bbox_a, bbox_b):
     :param bbox_b: Another bounding box
     :return: Intersection over union value
     """
-    x_a = max(bbox_a[1], bbox_b[1])
-    y_a = max(bbox_a[0], bbox_b[0])
-    x_b = min(bbox_a[3], bbox_b[3])
-    y_b = min(bbox_a[2], bbox_b[2])
+    #ToDo: ESTO ES UN PARCHE HORRIBLE
 
-    # Compute the area of intersection rectangle
-    inter_area = max(0, x_b - x_a + 1) * max(0, y_b - y_a + 1)
+    if bbox_a == bbox_b:
+        iou = 1
 
-    # Compute the area of both bboxes
-    bbox_a_area = (bbox_a[2] - bbox_a[0] + 1) * (bbox_a[3] - bbox_a[1] + 1)
-    bbox_b_area = (bbox_b[2] - bbox_b[0] + 1) * (bbox_b[3] - bbox_b[1] + 1)
+    else:
+        x_a = max(bbox_a[1], bbox_b[1])
+        y_a = max(bbox_a[0], bbox_b[0])
+        x_b = min(bbox_a[3], bbox_b[3])
+        y_b = min(bbox_a[2], bbox_b[2])
 
-    iou = inter_area / float(bbox_a_area + bbox_b_area - inter_area)
+        # Compute the area of intersection rectangle
+        inter_area = max(0, x_b - x_a + 1) * max(0, y_b - y_a + 1)
+
+        # Compute the area of both bboxes
+        bbox_a_area = (bbox_a[2] - bbox_a[0] + 1) * (bbox_a[3] - bbox_a[1] + 1)
+        bbox_b_area = (bbox_b[2] - bbox_b[0] + 1) * (bbox_b[3] - bbox_b[1] + 1)
+
+        iou = inter_area / float(bbox_a_area + bbox_b_area - inter_area)
 
     # Return the intersection over union value
     return iou
@@ -211,7 +218,7 @@ def iterate_iou(bboxes_result, bboxes_gt):
 
     iou = np.asarray(iou)
 
-    return list(iou / len(iou))
+    return sum(iou) / len(iou)
 
 
 def apk(actual, predicted, k=10):
@@ -554,8 +561,8 @@ def histogram(im_array, bins=128):
     return hist, bin_centers
 
 
-def compute_metrics(gt, img_shape, noise_size=5, noise_position=5,
-                    create_bbox_proba=0.5, destroy_bbox_proba=0.5, k=10):
+def compute_metrics(gt, img_shape, noise_size=True, noise_size_factor=5, noise_position=True,
+                    noise_position_factor=5, create_bbox_proba=0.5, destroy_bbox_proba=0.5, k=10, iou_thresh=0.5):
     """
     1. Add noise to ground truth Bounding Boxes.
     2.Compute Fscore, IoU, Map of two lists of Bounding Boxes.
@@ -572,17 +579,19 @@ def compute_metrics(gt, img_shape, noise_size=5, noise_position=5,
 
     # Add noise to GT depending on noise parameter
     bboxes = add_noise_to_bboxes(gt, img_shape,
-                                   noise_size=True,
-                                   noise_size_factor=noise_size,
-                                   noise_position=True,
-                                   noise_position_factor=noise_position)
+                                   noise_size=noise_size,
+                                   noise_size_factor=noise_size_factor,
+                                   noise_position=noise_position,
+                                   noise_position_factor=noise_position_factor)
 
     # Randomly create and destroy bounding boxes depending
     # on probability parameter
     bboxes = create_bboxes(bboxes, img_shape, prob=create_bbox_proba)
     bboxes = destroy_bboxes(bboxes, prob=destroy_bbox_proba)
 
-    bboxTP, bboxFN, bboxFP = evalf.performance_accumulation_window(bboxes, gt)
+    bboxTP, bboxFN, bboxFP = evalf.performance_accumulation_window(bboxes, gt, iou_thresh)
+
+    print(bboxTP, bboxFN, bboxFP )
 
     """
     Compute F-score of GT against modified bboxes PER FRAME NUMBER

@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-
+from __future__ import division
 # Built-in modules
 import glob
 import logging
@@ -8,7 +8,7 @@ import shutil
 import time
 
 # 3rd party modules
-import matplotlib as plt
+import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 
@@ -17,7 +17,6 @@ import utils as u
 
 
 # Logger setup
-from code.evaluation.evaluation_funcs import performance_accumulation_window
 
 logging.basicConfig(
     # level=logging.DEBUG,
@@ -36,6 +35,7 @@ OUTPUT_DIR = os.path.join(ROOT_DIR, 'output')
 FIGURES_DIR = os.path.join(OUTPUT_DIR, 'figures')
 
 IMG_SHAPE = (1080, 1920)
+threshold = 0.99 # IoU Threshold
 
 
 if __name__ == '__main__':
@@ -50,77 +50,110 @@ if __name__ == '__main__':
         df.append(u.get_bboxes_from_pascal(files, d))
     df = pd.concat(df)
 
-    # Get XML list from directory
-    xml_gt = u.get_files_from_dir(TRAIN_DIR_GT)
+    df_grouped = df.groupby('frame')
 
-    # Get GT from XML
-    df_gt = u.get_bboxes_from_aicity(xml_gt)
+    vals = list()
+    # iterate over each group
+    for group_name, df_group in df_grouped:
+        frame = df_group['frame'].values[0]
+        #df_gt = df_group[['xmin', 'xmax', 'ymin', 'ymax']].values.tolist()
+        #df_gt = df_group[['ymax', 'xmin', 'ymin', 'xmax']].values.tolist()
+        #2nd attempt:
+        df_gt = df_group[['ymin', 'xmin', 'ymax', 'xmax']].values.tolist()
 
+        # Correct order: tly, tlx, bry, brx
 
-    # Create for recorriendo frames
-    # data frame group by frame number
+        frame_vals = [frame]
 
-    bboxes, fscore, iou, map = u.compute_metrics(df_gt, IMG_SHAPE,
-                                               noise_size=5,
-                                               noise_position=5,
-                                               create_bbox_proba=0.5,
-                                               destroy_bbox_proba=0.5,
-                                               k=10)
+        """
+        1. Without noise: we expect excellent results
+        """
+        #print(df_group)
+        bboxes1, fscore1, iou1, map1 = u.compute_metrics(df_gt, IMG_SHAPE,
+                                                   noise_size=False,
+                                                   noise_position=False,
+                                                   create_bbox_proba=0,
+                                                   destroy_bbox_proba=0,
+                                                   k=1,
+                                                   iou_thresh=threshold)
+        frame_vals.extend([fscore1, iou1, map1])
 
-    """
-    1. Without noise: we expect excellent results
-    """
+        """
+        2. Add noise: (noise param = 50)
+        """
 
-    bboxes1, fscore1, iou1, map1 = u.compute_metrics(df_gt, IMG_SHAPE,
-                                               noise_size=0,
-                                               noise_position=0,
-                                               create_bbox_proba=0,
-                                               destroy_bbox_proba=0,
-                                               k=1)
+        bboxes2, fscore2, iou2, map2 = u.compute_metrics(df_gt, IMG_SHAPE,
+                                                         noise_size_factor=50,
+                                                         noise_position_factor=50,
+                                                         create_bbox_proba=0,
+                                                         destroy_bbox_proba=0,
+                                                         k=1,
+                                                         iou_thresh=threshold)
+        frame_vals.extend([fscore2, iou2, map2])
 
-    """
-    2. Add noise: (noise param = 5)
-    """
+        """
+        3. Increase noise: (noise param = 100)
+        """
 
-    bboxes2, fscore2, iou2, map2 = u.compute_metrics(df_gt, IMG_SHAPE,
-                                                     noise_size=5,
-                                                     noise_position=5,
-                                                     create_bbox_proba=0,
-                                                     destroy_bbox_proba=0,
-                                                     k=1)
+        bboxes3, fscore3, iou3, map3 = u.compute_metrics(df_gt, IMG_SHAPE,
+                                                         noise_size=100,
+                                                         noise_position=100,
+                                                         create_bbox_proba=0,
+                                                         destroy_bbox_proba=0,
+                                                         k=1,
+                                                         iou_thresh=threshold)
+        frame_vals.extend([fscore3, iou3, map3])
 
-    """
-    3. Increase noise: (noise param = 10)
-    """
+        """
+        4. Add random Bboxes: (noise param = 100, bbox proba = 0.5)
+        """
 
-    bboxes3, fscore3, iou3, map3 = u.compute_metrics(df_gt, IMG_SHAPE,
-                                                     noise_size=10,
-                                                     noise_position=10,
-                                                     create_bbox_proba=0,
-                                                     destroy_bbox_proba=0,
-                                                     k=1)
+        bboxes4, fscore4, iou4, map4 = u.compute_metrics(df_gt, IMG_SHAPE,
+                                                         noise_size=100,
+                                                         noise_position=100,
+                                                         create_bbox_proba=0.5,
+                                                         destroy_bbox_proba=0,
+                                                         k=1,
+                                                         iou_thresh=threshold)
+        frame_vals.extend([fscore4, iou4, map4])
 
-    """
-    4. Add random Bboxes: (noise param = 10, bbox proba = 0.5)
-    """
+        """
+        5. Increase random Bboxes: (noise param = 100, bbox proba = 0.8)
+        """
 
-    bboxes4, fscore4, iou4, map4 = u.compute_metrics(df_gt, IMG_SHAPE,
-                                                     noise_size=10,
-                                                     noise_position=10,
-                                                     create_bbox_proba=0.5,
-                                                     destroy_bbox_proba=0.5,
-                                                     k=1)
+        bboxes5, fscore5, iou5, map5 = u.compute_metrics(df_gt, IMG_SHAPE,
+                                                         noise_size=100,
+                                                         noise_position=100,
+                                                         create_bbox_proba=0.8,
+                                                         destroy_bbox_proba=0,
+                                                         k=1,
+                                                         iou_thresh=threshold)
+        frame_vals.extend([fscore5, iou5, map5])
 
-    """
-    5. Increase random Bboxes: (noise param = 10, bbox proba = 0.8)
-    """
+        vals.append(frame_vals)
 
-    bboxes5, fscore5, iou5, map5 = u.compute_metrics(df_gt, IMG_SHAPE,
-                                                     noise_size=10,
-                                                     noise_position=10,
-                                                     create_bbox_proba=0.8,
-                                                     destroy_bbox_proba=0.8,
-                                                     k=1)
+    df_metrics = pd.DataFrame(
+        vals,
+        columns=['frame', 'fscore1', 'iou1', 'map1', 'fscore2', 'iou2', 'map2', 'fscore3', 'iou3', 'map3',
+                 'fscore4', 'iou4', 'map4', 'fscore5', 'iou5', 'map5']
+    )
+
+    frame_number = df_metrics['frame'].values.tolist()
+    fscore1 = df_metrics['fscore1'].values.tolist()
+    iou1 = df_metrics['iou1'].values.tolist()
+    map1 = df_metrics['map1'].values.tolist()
+    fscore2 = df_metrics['fscore2'].values.tolist()
+    iou2 = df_metrics['iou2'].values.tolist()
+    map2 = df_metrics['map2'].values.tolist()
+    fscore3 = df_metrics['fscore3'].values.tolist()
+    iou3 = df_metrics['iou3'].values.tolist()
+    map3 = df_metrics['map3'].values.tolist()
+    fscore4 = df_metrics['fscore4'].values.tolist()
+    iou4 = df_metrics['iou4'].values.tolist()
+    map4 = df_metrics['map4'].values.tolist()
+    fscore5 = df_metrics['fscore5'].values.tolist()
+    iou5 = df_metrics['iou5'].values.tolist()
+    map5 = df_metrics['map5'].values.tolist()
 
     """
     TASK 2: Plot metrics against frame number

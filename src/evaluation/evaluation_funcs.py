@@ -33,7 +33,7 @@ def performance_accumulation_pixel(pixel_candidates, pixel_annotation):
 
 
 
-def performance_accumulation_window(detections, annotations):
+def performance_accumulation_window(detections, annotations, iou_thresh=0.5):
     """ 
     performance_accumulation_window()
 
@@ -63,7 +63,8 @@ def performance_accumulation_window(detections, annotations):
     TP = 0
     for ii in range (len(annotations)):
         for jj in range (len(detections)):
-            if (detections_used[jj] == 0) & (bbox_iou(annotations[ii], detections[jj]) > 0.5):
+            #if (detections_used[jj] == 0) & (bbox_iou(annotations[ii], detections[jj]) > 0.5):
+            if (detections_used[jj] == 0) & (bbox_iou(annotations[ii], detections[jj]) > iou_thresh):
                 TP = TP+1
                 detections_used[jj]  = 1
                 annotations_used[ii] = 1
