@@ -13,7 +13,7 @@ from matplotlib import gridspec
 #import matplotlib.ticker as ticker
 # Our LIBS
 import utils as utils
-
+from skimage.measure import block_reduce
 
 
 # Function for Optical Flow
@@ -87,9 +87,14 @@ def plotOF(img1,img2, Fu, Fv, step = 20 , title_ = 'Test' ):
     #mag, ang = cv.cartToPolar(Fu,Fv)
     Fu_dn = cv.resize(Fu, (0, 0), fx=1. / step, fy=1. / step)
     Fv_dn = cv.resize(Fv, (0, 0), fx=1. / step, fy=1. / step)
-
-    imsize = np.shape(Fu)
-    X,Y = np.meshgrid(np.arange(0,imsize[1],step),np.arange(0,imsize[0],step))
+    Fu_dn = block_reduce(Fu, block_size=(step,step), func=np.mean)
+    Fv_dn = block_reduce(Fv, block_size=(step,step), func=np.mean)
+    x_pos = np.arange(0, imsize[1], step)
+    y_pos = np.arange(0, imsize[0], step)
+    X = np.meshgrid(x_pos)
+    Y = np.meshgrid(y_pos)
+    #imsize = np.shape(Fu)
+    #X,Y = np.meshgrid(np.arange(0,imsize[1],step),np.arange(0,imsize[0],step))
     fig = plt.figure(1)
     ax1 = plt.subplot(311)
     ax3 = plt.subplot(312)
