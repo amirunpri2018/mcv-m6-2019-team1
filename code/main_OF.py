@@ -32,7 +32,7 @@ seq2_2 = '000157_11.png'
 [u2lk,v2lk,valid2lk] = ut.readOF(result_folder,'LKflow_'+seq2)
 
 
-task3_1 = True
+task3_1 = False
 # TASK 3.1
 if task3_1:
 # Computing the MSE + PEPE
@@ -59,7 +59,7 @@ if task3_1:
 
 
 # Visualization of Error
-Task_3_2 = True
+Task_3_2 = False
 if Task_3_2:
     # Seq 1
     ut.OF_err_disp(errmap1,valid1gt,seq1)
@@ -70,7 +70,7 @@ if Task_3_2:
     ut.OF_err_disp(errmag2,valid2gt,'Magnitude_'+seq2)
     ut.OF_err_disp(errang2,valid2gt,'Angle_' +seq2)
 
-Task_3_4 = False
+Task_3_4 = True
 # TASK 3.4
 if Task_3_4:
 # There is a big diffrence between the 2 sequances - checking if it due to bias value or angle difference

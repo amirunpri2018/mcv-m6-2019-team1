@@ -1,8 +1,8 @@
 def load_annotations(annot_file):
     # Annotations are stored in text files containing
     # the coordinates of the corners (top-left and bottom-right) of
-    # the bounding box plus an alfanumeric code indicating the signal type:
-    # tly, tlx, bry,brx, code
+    # the bounding box plus an alfanumeric src indicating the signal type:
+    # tly, tlx, bry,brx, src
 
     annotations = []
     signs       = [] 

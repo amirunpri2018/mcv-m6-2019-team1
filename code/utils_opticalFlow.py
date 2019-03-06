@@ -74,6 +74,16 @@ def plotOF(img1,img2, Fu, Fv, step = 20 , title_ = 'Test' ):
     # TODO
     """
     imsize = np.shape(Fu)
+    imsize = imsize +(3,)
+
+    hsv = np.zeros(imsize, dtype=np.uint8)
+    hsv[..., 1] = 255
+
+    mag, ang = cv.cartToPolar(Fu, Fv)
+    hsv[..., 0] = ang * 180 / np.pi / 2
+    hsv[..., 2] = cv.normalize(mag, None, 0, 255, cv.NORM_MINMAX)
+    rgb2 = cv.cvtColor(hsv, cv.COLOR_HSV2RGB)
+    #cv2.imshow("colored flow", rgb2)
     #mag, ang = cv.cartToPolar(Fu,Fv)
     Fu_dn = cv.resize(Fu, (0, 0), fx=1. / step, fy=1. / step)
     Fv_dn = cv.resize(Fv, (0, 0), fx=1. / step, fy=1. / step)
@@ -81,8 +91,10 @@ def plotOF(img1,img2, Fu, Fv, step = 20 , title_ = 'Test' ):
     imsize = np.shape(Fu)
     X,Y = np.meshgrid(np.arange(0,imsize[1],step),np.arange(0,imsize[0],step))
     fig = plt.figure(1)
-    ax1 = plt.subplot(211)
-    ax2 = plt.subplot(212)
+    ax1 = plt.subplot(311)
+    ax3 = plt.subplot(312)
+    ax2 = plt.subplot(313)
+    ax3.imshow(rgb2,interpolation = 'gaussian')
     img1_ex = np.expand_dims(img1,-1)
     img2_ex = np.expand_dims(img2,-1)
     rgb = np.concatenate((img1_ex,np.zeros_like(img1_ex),img2_ex),axis=2 )
@@ -92,7 +104,9 @@ def plotOF(img1,img2, Fu, Fv, step = 20 , title_ = 'Test' ):
     #ax1.imshow(img2,cmap ='Reds',alpha=.6)
 
     ax2.imshow(img1,cmap='gray')
-    ax1.set_title(title_)
+    ax3.set_title("Magnitude and angle")
+    ax2.set_title("quiver")
+    ax1.set_title(title_ + ", Overlapping images")
     M = np.hypot(Fu_dn,Fv_dn)
     #Q = ax2.quiver(X,Y,Fu_dn,Fv_dn,M,units='xy' ,alpha=0.6)
     Q = ax2.quiver(X,Y,Fu_dn,Fv_dn,M,units='xy' ,alpha=0.6)
