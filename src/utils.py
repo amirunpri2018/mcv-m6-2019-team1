@@ -34,7 +34,7 @@ def precision(tp, fp):
     :param fp: False positives
     :return: Precision
     """
-    return tp / (tp + fp)
+    return tp * 1.0 / (tp + fp)
 
 
 def recall(tp, fn):
@@ -45,7 +45,7 @@ def recall(tp, fn):
     :param fn: False negatives
     :return: Recall
     """
-    return tp / (tp + fn)
+    return tp * 1.0 / (tp + fn)
 
 
 def fscore(tp, fp, fn):
@@ -57,8 +57,12 @@ def fscore(tp, fp, fn):
     :param fn: False negatives
     :return: F-score
     """
-    return 2 * precision(tp, fp) * recall(tp, fn) / (
-                precision(tp, fp) + recall(tp, fn))
+    p = precision(tp, fp)
+    r = recall(tp, fn)
+    try:
+        return 2 * p * r / (p + r)
+    except ZeroDivisionError:
+        return 0
 
 
 def destroy_bboxes(bboxes, prob=0.5):
