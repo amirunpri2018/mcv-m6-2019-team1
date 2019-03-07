@@ -3,6 +3,9 @@
 # Video Surveillance for Road Traffic Monitoring
 
 Members:
-Ferrin, Facundo --> facundo.ferrin@gmail.com
-Mor, Noa --> noamor87@gmail.com
-Pose, Agustina --> aguupose@gmail.com
+
+- Ferrin, Facundo --> facundo.ferrin@gmail.com 
+
+- Mor, Noa --> noamor87@gmail.com
+
+- Pose, Agustina --> aguupose@gmail.com
