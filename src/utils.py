@@ -13,8 +13,9 @@ import bs4
 import numpy as np
 import pandas as pd
 
+#import imageio
 from skimage import exposure
-import src.evaluation.evaluation_funcs as evalf
+import evaluation.evaluation_funcs as evalf
 # Local modules
 
 # Logger setup
@@ -618,3 +619,29 @@ def compute_metrics(gt, img_shape, noise_size=True, noise_size_factor=5, noise_p
     map = mapk(bboxes, gt, k)
 
     return (bboxes, fscore_val, iou, map)
+
+
+def get_img(folder_dir, img_dir):
+    """
+    Get numpy array representation of the image.
+
+    :param folder_dir: Folder path
+    :param img_dir: Image path
+    :return: Numpy array with the RGB pixel values of the image
+    """
+
+    img_path = os.path.join(folder_dir, img_dir)
+    logger.debug("Getting image '{path}'".format(path=img_path))
+
+    return imageio.imread(img_path)
+
+def get_files_from_dir2(cdir,ext = None):
+    ListOfFiles = os.listdir(cdir)
+    ListOfFiles.sort()
+    file_list = []
+    for file_name in ListOfFiles:
+            #class_name = cdir.split('_')
+        if file_name.endswith(ext):
+            file_list.append(os.path.join(cdir,file_name))
+
+    return file_list

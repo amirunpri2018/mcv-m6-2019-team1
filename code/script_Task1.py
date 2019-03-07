@@ -2,9 +2,9 @@
 # Folder fnames
 import utils as ut
 import os
-DIR= '/home/noamor/Documents/repo/m6/annotation_pascal'
-xml_fname = '/home/noamor/Documents/repo/m6/datasets/AICity_data/train/S03/c010/Anotation_test.xml'
-xml_fname2 = '/home/noamor/Documents/repo/m6/Anotation_testN.xml'
+DIR= '../annotation_pascal'
+xml_fname = '../datasets/AICity_data/train/S03/c010/Anotation_test.xml'
+xml_fname2 = '../Anotation_testN.xml'
 ut.folderPascal2xml(xml_fname,xml_fname2,DIR)
 #file_list = []
 #i = 0

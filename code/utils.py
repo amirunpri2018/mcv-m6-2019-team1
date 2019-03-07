@@ -478,7 +478,7 @@ def get_bboxes_from_MOTChallenge(fname):
         ymax = float(data[3])+float(data[5])
         BBox_list.append({'frame':int(data[0]),'track_id':int(data[1]), 'xmin':float(data[2]), 'ymin':float(data[3]), 'xmax':xmax, 'ymax':ymax,'occlusion': 1,'conf' :float(data[6])})
 
-    return BBox_list
+    return pd.DataFrame(BBox_list)
 
 def BBoxList2Panda(BBox_list):
     pd.DataFrame(bboxes)
@@ -701,3 +701,15 @@ def compute_metrics(gt, img_shape, noise_size=True, noise_size_factor=5, noise_p
     map = mapk(bboxes, gt, k)
 
     return (bboxes, fscore_val, iou, map)
+
+    
+def get_files_from_dir2(cdir,ext = None):
+    ListOfFiles = os.listdir(cdir)
+    ListOfFiles.sort()
+    file_list = []
+    for file_name in ListOfFiles:
+            #class_name = cdir.split('_')
+        if file_name.endswith(ext):
+            file_list.append(os.path.join(cdir,file_name))
+
+    return file_list
