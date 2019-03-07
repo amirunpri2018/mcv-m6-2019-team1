@@ -36,6 +36,22 @@ def getGauss_bg(file_list, D=1):
         #I = get_img(file_list[i])
 
     mu_bg = A.mean(axis=2)
-    var_bg = A.var(axis=2)
+    std_bg = A.std(axis=2)
 
-    return mu_bg,var_bg
+    return mu_bg,std_bg
+def foreground_from_GBGmodel(bg_mu,bg_std,I,th =2):
+    """
+    Apply to any N Gaussian model, (as long the dimensions of I and bg agrees)
+    output : Boolien map
+        0 Background
+        1 Foreground
+
+        For now 8/3 only works for 1D (grayscale)
+    """
+    s = np.shape(I)
+    foreground_map = np.zeros((s[0],s[1]), dtype=bool )
+
+    # centered Image with repect to mu of the Background
+    Ic = np.abs(I-bg_mu)
+    foreground_map[Ic>=th*(bg_std+2)] = True
+    return foreground_map

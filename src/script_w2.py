@@ -24,16 +24,22 @@ frame_list = ut.get_files_from_dir2(frames_dir,ext = '.jpg')
 #print frame_list
 # training
 N =len(frame_list)
-Nt = int(N*0.01)
+
+# I couldnt run it with 25% on my computer due to memory problem-
+#PercentPerTraining = 0.25
+Nt = int(N*0.25)
 trainig_list = frame_list[:Nt]
 testing_list = frame_list[Nt:]
 print(N)
-print('Training')
+print('Training:')
 print(len(trainig_list))
-print('Testing')
+print('Testing:')
 print(len(testing_list))
-[muBG,varBG] = bg.getGauss_bg(trainig_list, D=1)
+[muBG,stdBG] = bg.getGauss_bg(trainig_list, D=1)
 
+"""
+GOOD IDEA IS TO SAVE TO BG MODEL SO WE CAN RUN ON IT DIFFERENT TESTS
+"""
 fig = plt.figure(1)
 ax1 = plt.subplot(211)
     #ax3 = plt.subplot(312)
@@ -48,15 +54,24 @@ ax2 = plt.subplot(212)
 #ax2.imshow(matplotlib.colors.hsv_to_rgb(hsv),cmap='hsv')
 #ax2.imshow(hsv)
 ax1.imshow(muBG,cmap='gray')
-ax2.imshow(varBG,cmap='gray')
-    #ax1.imshow(img1,cmap ='Blues')
-    #ax1.imshow(img2,cmap ='Reds',alpha=.6)
+ax2.imshow(stdBG,cmap='gray')
 
-    #ax2.imshow(img1,cmap='gray')
-#ax2.set_title("Mean and Var-noise")
 ax1.set_title("Mean BG model - #"+str(len(trainig_list))+" frames")
-ax2.set_title("Var noise BG model")
+ax2.set_title("Std noise BG model")
 
+plt.show()
+
+# Testing Example
+th = 2
+I = cv.imread(testing_list[1000],cv.IMREAD_GRAYSCALE)
+mapBG = bg.foreground_from_GBGmodel(muBG,stdBG,I,th =th)
+fig = plt.figure(1)
+ax1 = plt.subplot(211)
+ax2 = plt.subplot(212)
+ax1.imshow(I,cmap='gray')
+ax2.imshow(mapBG,cmap='gray')
+ax1.set_title(testing_list[1000])
+ax2.set_title("Foreground Map, with th="=str(th))
 plt.show()
 # showing the background model , mu +noise
 #print("mu: {},var: {}".format(len(muBG),len(varBG)))
