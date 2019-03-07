@@ -278,19 +278,43 @@ def add_tag(parent, tag_name, tag_value=None, tag_attrs=None):
     :param tag_attrs: Dictionary with tag attributes. Default: None
     :return: None
     """
+    print("AAAAAAAA")
+    print parent
+    print tag_name
     tag = parent.new_tag(tag_name)
     if tag_value is not None:
         tag.string = tag_value
     if tag_attrs is not None and isinstance(tag_attrs, dict):
         tag.attrs = tag_attrs
+
     parent.annotations.append(tag)
+
+def create_tag(parent, tag_name, tag_value=None, tag_attrs=None):
+    """
+    Add tag to a BeautifulSoup element.
+
+    :param parent: Parent element
+    :param tag_name: Tag name
+    :param tag_value: Tag value. Default: None
+    :param tag_attrs: Dictionary with tag attributes. Default: None
+    :return: None
+    """
+
+    tag = parent.new_tag(tag_name)
+
+    if tag_value is not None:
+        tag.string = tag_value
+
+    if tag_attrs is not None and isinstance(tag_attrs, dict):
+        tag.attrs = tag_attrs
+
+    return tag
 
 
 def create_aicity_xml_file(fname, dataframe):
     soup = bs4.BeautifulSoup('<annotations>', 'xml')
     add_tag(soup, 'version', tag_value='1.1')
     add_tag(soup, 'meta')
-    add_tag(soup.meta, 'task')
     add_tag(soup.meta.task, 'id', tag_value=2)
     add_tag(soup.meta.task, 'name', tag_value='AI_CITY_S03_C010')
     add_tag(soup.meta.task, 'size', tag_value=2141)
@@ -323,6 +347,7 @@ def create_aicity_xml_file(fname, dataframe):
     add_tag(soup, 'track', tag_attrs={'id': 1, 'label': 'bycicle'})
 
     for bbox in dataframe.iteritems():
+        print(bbox)
         add_tag(soup.track, 'bbox', tag_attrs={
             'frame': bbox.get('frame', None),
             'xtl': bbox.get('xtl', None),
@@ -339,6 +364,69 @@ def create_aicity_xml_file(fname, dataframe):
         f.writelines(output)
 
 
+def add_track2xml(xml_fname,xml_new_fname,track,class_name):
+    soup = read_xml(xml_fname)
+
+    tag_meta=soup.find("annotations")
+    track_idx=len(tag_meta.findChildren("track",recursive=False))+1
+    order_idx=len(tag_meta.findChildren())
+
+    new_track = create_tag(soup, "track", tag_attrs={'id': track_idx, 'label': class_name})
+
+    i=0
+
+    track = track.sort('frame')
+
+    for bbox in track.itertuples():
+
+        #frame  occlusion  track_id  xmax  xmin  ymax  ymin
+
+        bbox_new = create_tag(soup,'box', tag_attrs= {
+            'frame': getattr(bbox, "frame"),
+            'xtl': getattr(bbox, "xmin"),
+            'ytl': getattr(bbox, "ymin"),
+            'xbr': getattr(bbox, "xmax"),
+            'ybr': getattr(bbox, "ymax"),
+            'outside': 0,
+            'occluded': getattr(bbox, "occlusion"),
+            'keyframe': 1,
+        })
+        new_track.insert(i,bbox_new)
+
+        i+=1
+    tag_meta.insert(order_idx,new_track)
+    soup = soup.prettify()
+    f = open(xml_new_fname, "w")
+    f.write(soup)
+    f.close()
+
+def folderPascal2xml(xml_fname,xml_fname2,pdir):
+    file_list = []
+    i = 0
+    ListOfDir = os.listdir(pdir)
+    ListOfDir.sort()
+
+    for cdir in ListOfDir:
+        class_name = cdir.split('_')
+        cdir = os.path.join(pdir,cdir)
+
+        #print(int(class_name[0]))
+        if os.path.isdir(cdir):
+
+            file_list = []
+
+            for file_name in os.listdir(cdir):
+                if file_name.endswith(".xml"):
+                    file_list.append(os.path.join(cdir,file_name))
+
+            #print file_list
+
+            bboxes,pd_bboxes = get_bboxes_from_pascal(file_list, int(class_name[0]))
+
+            add_track2xml(xml_fname,xml_fname2,pd_bboxes,class_name[1])
+            xml_fname = xml_fname2
+            print(cdir + ' was added....')
+
 def read_xml(xml_fname):
     """
     Read XML file.
@@ -347,7 +435,7 @@ def read_xml(xml_fname):
     :return: BeautifulSoup object
     """
     xml_doc = urllib.urlopen(xml_fname)
-    return bs4.BeautifulSoup(xml_doc.read(), features='xml')
+    return bs4.BeautifulSoup(xml_doc.read(), features='lxml')
 
 
 def get_bboxes_from_aicity(fnames):
@@ -377,6 +465,7 @@ def get_bboxes_from_MOTChallenge(fname):
     """
     Get the Bboxes from the txt files
     MOTChallengr format [frame,ID,left,top,width,height,1,-1,-1,-1]
+     {'ymax': 84.0, 'frame': 90, 'track_id': 2, 'xmax': 672.0, 'xmin': 578.0, 'ymin': 43.0, 'occlusion': 1}
     fname: is the path to the txt file
     :returns: Pandas DataFrame with the data
     """
@@ -385,25 +474,16 @@ def get_bboxes_from_MOTChallenge(fname):
 
     for line in f:
         data = line.split(',')
-        BBox_list.append(Detection(int(data[0]), 'car', int(float(data[2])), int(float(data[3])), int(float(data[2])) + int(float(data[4])), int(float(data[3])) + int(float(data[5])),float(data[6])))
+        xmax = float(data[2])+float(data[4])
+        ymax = float(data[3])+float(data[5])
+        BBox_list.append({'frame':int(data[0]),'track_id':int(data[1]), 'xmin':float(data[2]), 'ymin':float(data[3]), 'xmax':xmax, 'ymax':ymax,'occlusion': 1,'conf' :float(data[6])})
 
     return BBox_list
 
-def write_bboxList_to_AIcity(BBox_list,filename):
-    
-    data = ET.Element('data')
-    items = ET.SubElement(data, 'items')
-    item1 = ET.SubElement(items, 'item')
-    item2 = ET.SubElement(items, 'item')
-    item1.set('name','item1')
-    item2.set('name','item2')
-    item1.text = 'item1abc'
-    item2.text = 'item2abc'
+def BBoxList2Panda(BBox_list):
+    pd.DataFrame(bboxes)
+    return PandaBbox
 
-    # create a new XML file with the results
-    mydata = ET.tostring(data)
-    myfile = open("items2.xml", "w")
-    myfile.write(mydata)
 def get_bboxes_from_pascal(fnames, track_id):
     """
     Get bounding boxes from Pascal XML-like file.
@@ -418,9 +498,9 @@ def get_bboxes_from_pascal(fnames, track_id):
     for fname in fnames:
         # Read file
         soup = read_xml(fname)
+        #print(soup)
         # Get parent tag of bounding boxes
         object_tag = soup.find('object')
-
         attrs = {
             'frame': int(
                 soup.find('filename').string.split('_')[1].split('.')[0]),
@@ -435,7 +515,7 @@ def get_bboxes_from_pascal(fnames, track_id):
         bboxes.append(attrs)
 
     # Return DataFrame
-    return pd.DataFrame(bboxes)
+    return bboxes,pd.DataFrame(bboxes)
 
 
 def get_files_from_dir(directory, excl_ext=None):
