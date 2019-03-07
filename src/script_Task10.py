@@ -1,14 +1,15 @@
 
 # Folder fnames
 import utils as ut
+import utils_xml as utx
 import os
 DIR= '../annotation_pascal'
 xml_fname = '../datasets/AICity_data/train/S03/c010/Anotation_test.xml'
-xml_fname2 = '../Anotation_testN.xml'
+xml_fname2 = '../week1_results/Anotation_G01.xml'
 fname='../datasets/AICity_data/train/S03/c010/gt/gt.txt'
 
-BboxList =ut.get_bboxes_from_aicity(xml_fname2)
-BboxList = ut.get_bboxes_from_MOTChallenge(fname)
+BboxList =utx.get_bboxes_from_aicity(xml_fname2)
+#BboxList = ut.get_bboxes_from_MOTChallenge(fname)
 print(type(BboxList))
 print(BboxList)
 #ut.folderPascal2xml(xml_fname,xml_fname2,DIR)

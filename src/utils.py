@@ -273,144 +273,6 @@ def mapk(actual, predicted, k=10):
     return np.mean([apk(a, p, k) for a, p in zip(actual, predicted)])
 
 
-def add_tag(parent, tag_name, tag_value=None, tag_attrs=None):
-    """
-    Add tag to a BeautifulSoup element.
-
-    :param parent: Parent element
-    :param tag_name: Tag name
-    :param tag_value: Tag value. Default: None
-    :param tag_attrs: Dictionary with tag attributes. Default: None
-    :return: None
-    """
-    tag = parent.new_tag(tag_name)
-    if tag_value is not None:
-        tag.string = tag_value
-    if tag_attrs is not None and isinstance(tag_attrs, dict):
-        tag.attrs = tag_attrs
-    parent.annotations.append(tag)
-
-
-def create_aicity_xml_file(fname, dataframe):
-    soup = bs4.BeautifulSoup('<annotations>', 'xml')
-    add_tag(soup, 'version', tag_value='1.1')
-    add_tag(soup, 'meta')
-    add_tag(soup.meta, 'task')
-    add_tag(soup.meta.task, 'id', tag_value=2)
-    add_tag(soup.meta.task, 'name', tag_value='AI_CITY_S03_C010')
-    add_tag(soup.meta.task, 'size', tag_value=2141)
-    add_tag(soup.meta.task, 'mode', tag_value='interpolation')
-    add_tag(soup.meta.task, 'overlap', tag_value=5)
-    add_tag(soup.meta.task, 'bugtracker')
-    add_tag(soup.meta.task, 'flipped', tag_value=False)
-    add_tag(soup.meta.task, 'created',
-            tag_value='2019-02-26 14:46:50.754264+03:00')
-    add_tag(soup.meta.task, 'updated',
-            tag_value='2019-02-26 15:58:28.473275+03:00')
-    add_tag(soup.meta.task, 'source', tag_value='vdo.avi')
-    # TODO
-    add_tag(soup.meta.task, 'labels')
-    add_tag(soup.meta.task.labels, 'label')
-    # TODO
-    add_tag(soup.meta.task, 'segments')
-    add_tag(soup.meta.task.segments, 'segment')
-
-    add_tag(soup.meta.task, 'owner')
-    add_tag(soup.meta.task.owner, 'username', tag_value='admin')
-    add_tag(soup.meta.task.owner, 'email', tag_value='jrhupc@gmail.com')
-
-    add_tag(soup.meta.task, 'original_size')
-    add_tag(soup.meta.task.original_size, 'width', tag_value=1920)
-    add_tag(soup.meta.task.original_size, 'height', tag_value=1080)
-
-    add_tag(soup.meta, 'dumped', tag_value='2019-02-26 15:58:30.413447+03:00')
-
-    add_tag(soup, 'track', tag_attrs={'id': 1, 'label': 'bycicle'})
-
-    for bbox in dataframe.iteritems():
-        add_tag(soup.track, 'bbox', tag_attrs={
-            'frame': bbox.get('frame', None),
-            'xtl': bbox.get('xtl', None),
-            'ytl': bbox.get('ytl', None),
-            'xbr': bbox.get('xbr', None),
-            'ybr': bbox.get('ybr', None),
-            'outside': bbox.get('outside', None),
-            'occluded': bbox.get('occluded', None),
-            'keyframe': bbox.get('keyframe', None),
-        })
-
-    output = soup.prettify()
-    with (fname, 'wb') as f:
-        f.writelines(output)
-
-
-def read_xml(xml_fname):
-    """
-    Read XML file.
-
-    :param xml_fname: XML filename
-    :return: BeautifulSoup object
-    """
-    xml_doc = urllib.urlopen(xml_fname)
-    return bs4.BeautifulSoup(xml_doc.read(), features='xml')
-
-
-def get_bboxes_from_aicity(fnames):
-    """
-    Get bounding boxes from AICity XML-like file.
-
-    :param fname: List XML filename
-    :return: Pandas DataFrame with the data
-    """
-    if not isinstance(fnames, list):
-        fnames = [fnames]
-
-    bboxes = list()
-    for fname in fnames:
-        # Read file
-        soup = read_xml(fname)
-        # Get parent tag of bounding boxes
-        bboxes_tag = soup.find('track')
-        # Iterate over bounding boxes and append the attributes to the list
-        for child in bboxes_tag.find_all('box'):
-            bboxes.append(child.attrs)
-
-    # Return DataFrame
-    return pd.DataFrame(bboxes)
-
-
-def get_bboxes_from_pascal(fnames, track_id):
-    """
-    Get bounding boxes from Pascal XML-like file.
-
-    :param fname: List XML filename
-    :return: Pandas DataFrame with the data
-    """
-    if not isinstance(fnames, list):
-        fnames = [fnames]
-
-    bboxes = list()
-    for fname in fnames:
-        # Read file
-        soup = read_xml(fname)
-        # Get parent tag of bounding boxes
-        object_tag = soup.find('object')
-
-        attrs = {
-            'frame': int(
-                soup.find('filename').string.split('_')[1].split('.')[0]),
-            'occlusion': int(object_tag.find('difficult').string),
-            'track_id': track_id
-        }
-
-        # Iterate over bounding boxes and append the attributes to the list
-        for child in object_tag.find('bndbox').children:
-            if isinstance(child, bs4.element.Tag):
-                attrs[child.name] = float(child.string)
-        bboxes.append(attrs)
-
-    # Return DataFrame
-    return pd.DataFrame(bboxes)
 
 
 def get_files_from_dir(directory, excl_ext=None):
@@ -456,11 +318,6 @@ def readOF(OFdir, filename):
     u = np.multiply(u, valid_OF)
     v = np.multiply(v, valid_OF)
     return u, v
-
-
-def plotOF(img, u, v):
-    mag, ang = cv.cartToPolar(u, v)
-
 
 def mse(image_a, image_b):
     """
@@ -645,3 +502,22 @@ def get_files_from_dir2(cdir,ext = None):
             file_list.append(os.path.join(cdir,file_name))
 
     return file_list
+
+def get_bboxes_from_MOTChallenge(fname):
+    """
+    Get the Bboxes from the txt files
+    MOTChallengr format [frame,ID,left,top,width,height,1,-1,-1,-1]
+     {'ymax': 84.0, 'frame': 90, 'track_id': 2, 'xmax': 672.0, 'xmin': 578.0, 'ymin': 43.0, 'occlusion': 1}
+    fname: is the path to the txt file
+    :returns: Pandas DataFrame with the data
+    """
+    f = open(fname,"r")
+    BBox_list = list()
+
+    for line in f:
+        data = line.split(',')
+        xmax = float(data[2])+float(data[4])
+        ymax = float(data[3])+float(data[5])
+        #BBox_list.append({'frame':int(data[0]),'track_id':int(data[1]), 'xmin':float(data[2]), 'ymin':float(data[3]), 'xmax':xmax, 'ymax':ymax,'occlusion': 1,'conf' :float(data[6])})
+        BBox_list.append({'frame':int(data[0]),'track_id':int(data[1]), 'xmin':float(data[2]), 'ymin':float(data[3]), 'xmax':xmax, 'ymax':ymax,'occlusion': 1,'conf' :float(data[6])})
+    return pd.DataFrame(BBox_list)
