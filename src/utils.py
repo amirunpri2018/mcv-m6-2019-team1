@@ -521,3 +521,25 @@ def get_bboxes_from_MOTChallenge(fname):
         #BBox_list.append({'frame':int(data[0]),'track_id':int(data[1]), 'xmin':float(data[2]), 'ymin':float(data[3]), 'xmax':xmax, 'ymax':ymax,'occlusion': 1,'conf' :float(data[6])})
         BBox_list.append({'frame':int(data[0]),'track_id':int(data[1]), 'xmin':float(data[2]), 'ymin':float(data[3]), 'xmax':xmax, 'ymax':ymax,'occlusion': 1,'conf' :float(data[6])})
     return pd.DataFrame(BBox_list)
+
+def frameIdfrom_filename(file_name):
+    #file_name.split()
+    return int(file_name.split('_')[-1].split('.')[0])
+
+
+def getbboxmask(BboxList,frm,imsize):
+
+
+    bs = BboxList.loc[BboxList['frame']==frm]
+    mask = np.ones(imsize,dtype =bool)
+
+    if not bs.empty:
+        for b in bs.itertuples():
+            #print(b)
+            a = range(int(getattr(b, "xmin")),int(getattr(b, "xmax")))
+            v = range(int(getattr(b, "ymin")),int(getattr(b, "ymax")))
+            xx, yy = np.meshgrid( a, v )
+
+            mask[yy,xx] = np.zeros(np.shape(xx),dtype =bool)
+
+    return mask

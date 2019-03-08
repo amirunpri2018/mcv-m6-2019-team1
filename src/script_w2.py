@@ -19,15 +19,19 @@ Estimating on 25% of the video frame
 '
 """
 frames_dir = '../m6_week1_frames/frames'
+gt_file = '../datasets/AICity_data/train/S03/c010/gt/gt.txt'
 frame_list = ut.get_files_from_dir2(frames_dir,ext = '.jpg')
 #frame_list = ut.get_files_from_dir(frames_dir, excl_ext='jpg')
 #print frame_list
 # training
 N =len(frame_list)
 
+#ffmpeg
+
 # I couldnt run it with 25% on my computer due to memory problem-
 #PercentPerTraining = 0.25
 Nt = int(N*0.25)
+#trainig_list = frame_list[:Nt]
 trainig_list = frame_list[:Nt]
 testing_list = frame_list[Nt:]
 print(N)
@@ -35,8 +39,9 @@ print('Training:')
 print(len(trainig_list))
 print('Testing:')
 print(len(testing_list))
-[muBG,stdBG] = bg.getGauss_bg(trainig_list, D=1)
 
+[muBG,stdBG] = bg.getGauss_bg(trainig_list, D=1,gt_file = gt_file)
+[muBG1,stdBG1] = bg.getGauss_bg(trainig_list, D=1)
 """
 GOOD IDEA IS TO SAVE TO BG MODEL SO WE CAN RUN ON IT DIFFERENT TESTS
 """
@@ -71,7 +76,7 @@ ax2 = plt.subplot(212)
 ax1.imshow(I,cmap='gray')
 ax2.imshow(mapBG,cmap='gray')
 ax1.set_title(testing_list[1000])
-ax2.set_title("Foreground Map, with th="=str(th))
+ax2.set_title("Foreground Map, with th="+str(th))
 plt.show()
 # showing the background model , mu +noise
 #print("mu: {},var: {}".format(len(muBG),len(varBG)))
