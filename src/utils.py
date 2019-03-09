@@ -528,10 +528,15 @@ def frameIdfrom_filename(file_name):
 
 
 def getbboxmask(BboxList,frm,imsize):
+    """
+    Returns a mask of
+    - False in the Background
+    - True in the Foreground
 
+    """
 
     bs = BboxList.loc[BboxList['frame']==frm]
-    mask = np.ones(imsize,dtype =bool)
+    mask = np.zeros(imsize,dtype =bool)
 
     if not bs.empty:
         for b in bs.itertuples():
@@ -540,6 +545,6 @@ def getbboxmask(BboxList,frm,imsize):
             v = range(int(getattr(b, "ymin")),int(getattr(b, "ymax")))
             xx, yy = np.meshgrid( a, v )
 
-            mask[yy,xx] = np.zeros(np.shape(xx),dtype =bool)
+            mask[yy,xx] = np.ones(np.shape(xx),dtype =bool)
 
     return mask

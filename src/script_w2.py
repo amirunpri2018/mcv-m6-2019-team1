@@ -10,6 +10,7 @@ matplotlib.use('TkAgg')
 # For visulization
 import matplotlib.pyplot as plt
 
+
 """
 task 1
 1 Gaussian Background model
@@ -18,9 +19,10 @@ Estimating on 25% of the video frame
 - Estimation " " with respect to the BBox - ignoring them from the calculation
 '
 """
-frames_dir = '../m6_week1_frames/frames'
+frames_dir = '../frames'
 gt_file = '../datasets/AICity_data/train/S03/c010/gt/gt.txt'
 frame_list = ut.get_files_from_dir2(frames_dir,ext = '.jpg')
+output_dir = '../week2_results/'
 #frame_list = ut.get_files_from_dir(frames_dir, excl_ext='jpg')
 #print frame_list
 # training
@@ -40,8 +42,14 @@ print(len(trainig_list))
 print('Testing:')
 print(len(testing_list))
 
-[muBG,stdBG] = bg.getGauss_bg(trainig_list, D=1,gt_file = gt_file)
-[muBG1,stdBG1] = bg.getGauss_bg(trainig_list, D=1)
+[muBG,stdBG] = bg.getGauss_bg2(trainig_list, D=1,gt_file = gt_file)
+#[muBG,stdBG] = bg.getGauss_bg2(trainig_list, D=1)
+# Output 1
+Out1 = cv.merge((muBG,stdBG,np.zeros(np.shape(muBG))))
+print(np.shape(Out1))
+cv.imwrite(output_dir+'Bg_1g_masked.png',Out1)
+#np.save(output_dir+'Bg_1g',Out1)
+
 """
 GOOD IDEA IS TO SAVE TO BG MODEL SO WE CAN RUN ON IT DIFFERENT TESTS
 """
@@ -68,14 +76,14 @@ plt.show()
 
 # Testing Example
 th = 2
-I = cv.imread(testing_list[1000],cv.IMREAD_GRAYSCALE)
+I = cv.imread(testing_list[500],cv.IMREAD_GRAYSCALE)
 mapBG = bg.foreground_from_GBGmodel(muBG,stdBG,I,th =th)
 fig = plt.figure(1)
 ax1 = plt.subplot(211)
 ax2 = plt.subplot(212)
 ax1.imshow(I,cmap='gray')
 ax2.imshow(mapBG,cmap='gray')
-ax1.set_title(testing_list[1000])
+ax1.set_title(testing_list[500])
 ax2.set_title("Foreground Map, with th="+str(th))
 plt.show()
 # showing the background model , mu +noise
