@@ -170,6 +170,85 @@ def foreground_from_GBGmodel(bg_mu,bg_std,I,th =2):
     s = np.shape(I)
     foreground_map = np.zeros((s[0],s[1]), dtype=bool )
 
+
+# State of the art background subtraction:
+
+
+def background_subtractor_MOG(cap):
+
+    """
+    cap = cv.VideoCapture('vdo.avi')
+    """
+
+    fgbg = cv.bgsegm.createBackgroundSubtractorMOG()
+    while(1):
+        ret, frame = cap.read()
+        fgmask = fgbg.apply(frame)
+        cv.imshow('frame',fgmask)
+        k = cv.waitKey(30) & 0xff
+        if k == 27:
+            break
+    cap.release()
+    cv.destroyAllWindows()
+    
+
+def background_subtractor_MOG2(cap):
+
+    """
+    cap = cv.VideoCapture('vdo.avi')
+    """
+
+    fgbg = cv.createBackgroundSubtractorMOG2()
+    while(1):
+        ret, frame = cap.read()
+        fgmask = fgbg.apply(frame)
+        cv.imshow('frame',fgmask)
+        k = cv.waitKey(30) & 0xff
+        if k == 27:
+            break
+    cap.release()
+    cv.destroyAllWindows()
+    
+    
+def background_subtractor_GMG(cap):
+
+    """
+    cap = cv.VideoCapture('vdo.avi')
+    
+    Warning: first frames will be black
+    """
+
+    kernel = cv.getStructuringElement(cv.MORPH_ELLIPSE,(3,3))
+    fgbg = cv.bgsegm.createBackgroundSubtractorGMG()
+    while(1):
+        ret, frame = cap.read()
+        fgmask = fgbg.apply(frame)
+        fgmask = cv.morphologyEx(fgmask, cv.MORPH_OPEN, kernel)
+        cv.imshow('frame',fgmask)
+        k = cv.waitKey(30) & 0xff
+        if k == 27:
+            break
+    cap.release()
+    cv.destroyAllWindows()
+    
+    
+def background_subtractor_LSBP(cap):
+
+    """
+    cap = cv.VideoCapture('vdo.avi')
+    """
+
+    fgbg = cv.bgsegm.createBackgroundSubtractorLSBP()
+    while(1):
+        ret, frame = cap.read()
+        fgmask = fgbg.apply(frame)
+        cv.imshow('frame',fgmask)
+        k = cv.waitKey(30) & 0xff
+        if k == 27:
+            break
+    cap.release()
+    cv.destroyAllWindows()
+
     # centered Image with repect to mu of the Background
     Ic = np.abs(I-bg_mu)
     foreground_map[Ic>=th*(bg_std+2)] = True
