@@ -4,8 +4,27 @@ import utils as ut
 
 import cv2 as cv
 
+import matplotlib
+matplotlib.use('TkAgg')
 
-def getGauss_bg(file_list, D=1 , gt_file = None):
+import matplotlib.animation as manimation
+# For visulization
+import matplotlib.pyplot as plt
+
+# fig = plt.figure()
+# l, = plt.plot([], [], 'k-o')
+#
+#
+# with writer.saving(fig, "writer_test.mp4", 100):
+#     for i in range(100):
+#         x0 += 0.1 * np.random.randn()
+#         y0 += 0.1 * np.random.randn()
+#         l.set_data(x0, y0)
+#         writer.grab_frame()
+
+
+
+def getGauss_bg2(file_list, D=1 , gt_file = None, output_dir = None):
     """
     Computes Gaussian Background model.
 
@@ -15,7 +34,9 @@ def getGauss_bg(file_list, D=1 , gt_file = None):
     :return: mu_bg -  mean, var_bg
     """
 
-# Read the frame from the video and NOT the images
+
+# Create aa video of constructing the background MODEL
+
 
     if D==1:
         Clr_flag = cv.IMREAD_GRAYSCALE
@@ -26,86 +47,76 @@ def getGauss_bg(file_list, D=1 , gt_file = None):
     if gt_file:
         Bbox = ut.get_bboxes_from_MOTChallenge(gt_file)
     # Count the number of Images
-    N = len(file_list)
+
     # get image size
-
-    s = np.shape(cv.imread(file_list[0],Clr_flag))
-
-    # initializing the cumalitive frame matrix
-    if D==1:
-        A = np.ones((s[0],s[1],N))
-        ma = np.ones((s[0],s[1],N),dtype=np.bool)
-    for i,image_path in enumerate(file_list, start=0):
-
-        if gt_file:
-            frm = ut.frameIdfrom_filename(image_path)
-
-            ma[:,:,i] = ut.getbboxmask(Bbox,frm,(s[0],s[1]))
-
-        #Upload frame
-        I = cv.imread(image_path,Clr_flag)
-
-        if D==1:
-            A[:,:,i] = I
-
-    mu_bg = A.mean(axis=2)
-    std_bg = A.std(axis=2)
-    if gt_file:
-
-        for r in range(s[0]):
-            for c in range(s[1]):
-                p = A[r,c,ma[r,c,:]]
-                mu_bg[r,c] = p.mean()
-                std_bg[r,c] = p.std()
-
-    return mu_bg,std_bg
-
-def getGauss_bg2(file_list, D=1 , gt_file = None):
-    """
-    Computes Gaussian Background model.
-
-    :file_list: list of all images used to estimate the bg model
-    :D: False positives
-    : git_file , ignoring bbox of foreground when creating the bg model
-    :return: mu_bg -  mean, var_bg
-    """
-
-# Read the frame from the video and NOT the images
-
-    if D==1:
-        Clr_flag = cv.IMREAD_GRAYSCALE
-    else :
-        Clr_flag = cv.IMREAD_COLOR
-
-    # if there is bbox to ignore fron
-    if gt_file:
-        Bbox = ut.get_bboxes_from_MOTChallenge(gt_file)
-    # Count the number of Images
     N = len(file_list)
-    # get image size
 
     s = np.shape(cv.imread(file_list[0],Clr_flag))
     m0 = np.zeros((s[0],s[1]),dtype=bool)
     # initializing the cumalitive frame matrix
     if D==1:
         A = np.zeros((s[0],s[1]))
-        #ma = np.ones((s[0],s[1]),dtype=np.float)
         ma = np.full((s[0],s[1]), float(N))
+    #fig = plt.figure(1)
 
+    if output_dir:
+        #FFMpegWriter = manimation.writers['ffmpeg']
+        #writer = FFMpegWriter(fps=20, metadata=dict(artist='Team1',title='BG model'))
+
+        fig_ani = plt.figure(2)
+        ax1_ani = plt.subplot(221) # mu
+        ax2_ani = plt.subplot(222) # std
+        ax3_ani = plt.subplot(223) # mask
+        ax4_ani = plt.subplot(224) # mask
+        ax1_ani.imshow(A,cmap='gray')
+        ax2_ani.imshow(A,cmap='gray')
+        ax3_ani.imshow(ma,cmap='gray',vmin=0,vmax=N)
+        ax4_ani.imshow(m0,cmap='gray')
+        #writer.saving(fig_ani, vid_file, dpi=100)
     # I. Loop to obtain mean
+
+
+    #for j in range(n):
+        #update_figure(n)         #moviewriter.grab_frame()
     for i,image_path in enumerate(file_list, start=0):
         if gt_file:
             frm = ut.frameIdfrom_filename(image_path)
             m0 = ut.getbboxmask(Bbox,frm,(s[0],s[1]))
+
         #Upload frame
         if D==1:
-            I = cv.imread(image_path,Clr_flag)
+            # Read the frame from the video and NOT the images
+            I= cv.imread(image_path,Clr_flag)
+            if output_dir:
+                ax2_ani.cla()
+                ax4_ani.cla()
+                ax2_ani.imshow(I,cmap='gray')
+                ax4_ani.imshow(m0,cmap='gray',vmin=0,vmax=1)
+                ax4_ani.set_title("Current mask")
+                ax2_ani.set_title("frame {}".format(frm))
+                plt.pause(0.01)
+
             np.place(I, m0, 0.0)
             ma -= m0
             # Adding frames values
             A+= I
+            if output_dir:
+                ax1_ani.cla()
+                ax3_ani.cla()
+                ax1_ani.imshow(A,cmap='gray')
+                ax3_ani.imshow(ma,cmap='gray',vmin=0,vmax=N)
+
+                ax1_ani.set_title("Cumulative frames")
+                fig_ani.savefig(output_dir+'frm'+str(frm)+'.png')
+
+        #writer.grab_frame()
+                            #ax1_ani.cla()
     # Do ma need to be float??
     mu_bg = A/ma
+    if output_dir:
+        ax1_ani.cla()
+        ax1_ani.imshow(mu_bg,cmap='gray')
+        ax1_ani.set_title("Mean BG, over {} frames".format(frm))
 
     if D==1:
         A = np.zeros((s[0],s[1]))
@@ -120,11 +131,29 @@ def getGauss_bg2(file_list, D=1 , gt_file = None):
         #Upload frame
         if D==1:
             I = (cv.imread(image_path,Clr_flag)-mu_bg)**2
+            if output_dir:
+                ax2_ani.cla()
+                ax2_ani.imshow(I,cmap='gray')
+                ax2_ani.set_title("frame #{}".format(frm))
+                ax4_ani.cla()
+                ax4_ani.imshow(m0,cmap='gray',vmin=0,vmax=1)
+                ax4_ani.set_title("Current mask")
             np.place(I, m0, 0.0)
             A+= I
+            if output_dir:
+                ax3_ani.cla()
+                ax3_ani.imshow(A,cmap='gray')
+                ax3_ani.set_title("Cumulative STD")
+                fig_ani.savefig(output_dir+'frm'+str(frm)+'.png')
 
     std_bg = np.sqrt(A/ma)
-
+    #ani.save('HeroinOverdosesJumpy.mp4', writer=writer)
+    if output_dir:
+        ax3_ani.cla()
+        ax3_ani.imshow(std_bg,cmap='gray')
+        ax3_ani.set_title("Std BG, over {} frames".format(frm))
+        fig_ani.savefig(output_dir+'final.png')
+        plt.close(fig_ani)
     return mu_bg,std_bg
 
 

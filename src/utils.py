@@ -18,6 +18,8 @@ from skimage import exposure
 import evaluation.evaluation_funcs as evalf
 # Local modules
 
+# sort
+import re
 # Logger setup
 logging.basicConfig(
     # level=logging.DEBUG,
@@ -548,3 +550,9 @@ def getbboxmask(BboxList,frm,imsize):
             mask[yy,xx] = np.ones(np.shape(xx),dtype =bool)
 
     return mask
+
+def atoi(text):
+    return int(text) if text.isdigit() else text
+
+def natural_keys(text):
+    return [ atoi(c) for c in re.split('(\d+)',text) ]

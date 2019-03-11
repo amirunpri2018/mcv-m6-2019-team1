@@ -22,7 +22,11 @@ Estimating on 25% of the video frame
 frames_dir = '../frames'
 gt_file = '../datasets/AICity_data/train/S03/c010/gt/gt.txt'
 frame_list = ut.get_files_from_dir2(frames_dir,ext = '.jpg')
+frame_list.sort(key=ut.natural_keys)
+
 output_dir = '../week2_results/'
+if not os.path.isdir(output_dir+'BG_1G/'):
+    os.mkdir(output_dir+'BG_1G/')
 #frame_list = ut.get_files_from_dir(frames_dir, excl_ext='jpg')
 #print frame_list
 # training
@@ -36,18 +40,21 @@ Nt = int(N*0.25)
 #trainig_list = frame_list[:Nt]
 trainig_list = frame_list[:Nt]
 testing_list = frame_list[Nt:]
-print(N)
-print('Training:')
-print(len(trainig_list))
-print('Testing:')
-print(len(testing_list))
+print(np.shape(trainig_list))
+print("Total # of frames {}".format(N))
+print("Training: # {}".format(len(trainig_list)))
+print("Testing: # {}".format(len(testing_list)))
+
 
 [muBG,stdBG] = bg.getGauss_bg2(trainig_list, D=1,gt_file = gt_file)
+[muBG2,stdBG2] = bg.getGauss_bg2(trainig_list, D=1)
 #[muBG,stdBG] = bg.getGauss_bg2(trainig_list, D=1)
 # Output 1
 Out1 = cv.merge((muBG,stdBG,np.zeros(np.shape(muBG))))
+Out2 = cv.merge((muBG2,stdBG2,np.zeros(np.shape(muBG2))))
 print(np.shape(Out1))
-cv.imwrite(output_dir+'Bg_1g_masked.png',Out1)
+cv.imwrite(output_dir+'BG_1g_masked.png',Out1)
+cv.imwrite(output_dir+'BG_1g.png',Out2)
 #np.save(output_dir+'Bg_1g',Out1)
 
 """
@@ -58,14 +65,7 @@ ax1 = plt.subplot(211)
     #ax3 = plt.subplot(312)
 ax2 = plt.subplot(212)
 
-#img1_ex = np.expand_dims(muBG,-1)
-#img2_ex = np.expand_dims(varBG,-1)
-#hsv = np.concatenate((img1_ex,np.zeros_like(img1_ex),img2_ex),axis=2 )
-#hsv = cv.cvtColor(hsv,  cv.COLOR_HSV2BGR);
-    #cv::imshow("optical flow", bgr);
-    #rgb = np.concatenate((img1_ex,img2_ex,img2_ex),axis=2 )
-#ax2.imshow(matplotlib.colors.hsv_to_rgb(hsv),cmap='hsv')
-#ax2.imshow(hsv)
+
 ax1.imshow(muBG,cmap='gray')
 ax2.imshow(stdBG,cmap='gray')
 
@@ -75,7 +75,7 @@ ax2.set_title("Std noise BG model")
 plt.show()
 
 # Testing Example
-th = 2
+th = 3
 I = cv.imread(testing_list[500],cv.IMREAD_GRAYSCALE)
 mapBG = bg.foreground_from_GBGmodel(muBG,stdBG,I,th =th)
 fig = plt.figure(1)
