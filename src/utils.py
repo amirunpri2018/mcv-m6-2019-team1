@@ -549,11 +549,8 @@ def getbboxmask(BboxList,frm,imsize):
             xmax = int(getattr(b, "xmax"))
             ymin = int(getattr(b, "ymin"))
             ymax = int(getattr(b, "ymax"))
-            a = range(xmin,xmax)
-            v = range(ymin,ymax)
-            xx, yy = np.meshgrid( a, v )
-            print([xmin,xmax,ymin,ymax])
-            print(type([xmin,xmax,ymin,ymax]))
+            xx, yy = np.meshgrid( range(xmin,xmax), range(ymin,ymax) )
+
             bbox_list.append([xmin,xmax,ymin,ymax])
             mask[yy,xx] = np.ones(np.shape(xx),dtype =bool)
 

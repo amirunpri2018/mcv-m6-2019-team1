@@ -26,7 +26,7 @@ frame_list.sort(key=ut.natural_keys)
 
 output_dir = '../week2_results/'
 output_subdir = 'BG_1G/'
-exp_name = 'BG1G'
+exp_name = 'BG1G_noGT'
 
 if not os.path.isdir(output_dir+output_subdir):
     os.mkdir(output_dir+output_subdir)
@@ -43,7 +43,7 @@ else :
 
 # I couldnt run it with 25% on my computer due to memory problem-
 #PercentPerTraining = 0.25
-Nt = int(N*0.01)
+Nt = int(N*0.02)
 #trainig_list = frame_list[:Nt]
 trainig_list = frame_list[:Nt]
 testing_list = frame_list[Nt:]
@@ -53,10 +53,17 @@ print("Training: # {}".format(len(trainig_list)))
 print("Testing: # {}".format(len(testing_list)))
 
 
-#[muBG,stdBG] = bg.getGauss_bg2(trainig_list, D=3,gt_file = gt_file)
-[muBG,stdBG] = bg.getGauss_bg(trainig_list, D=d,gt_file = None)
-np.save(output_dir+output_subdir+exp_name+'_mu.npy',muBG)
-np.save(output_dir+output_subdir+exp_name+'_std.npy',stdBG)
+if os.path.isfile(output_dir+output_subdir+exp_name+'_mu.npy'):
+    muBG = np.load(output_dir+output_subdir+exp_name+'_mu.npy')
+    stdBG = np.load(output_dir+output_subdir+exp_name+'_std.npy')
+else:
+    # BG_1G/BG1G
+    #[muBG,stdBG] = bg.getGauss_bg(trainig_list, D=d,gt_file = None)
+    # BG_1G_GT/BG1G
+    gt_file = None
+    [muBG,stdBG] = bg.getGauss_bg(trainig_list, D=d,gt_file = gt_file)
+    np.save(output_dir+output_subdir+exp_name+'_mu.npy',muBG)
+    np.save(output_dir+output_subdir+exp_name+'_std.npy',stdBG)
 
 
 """
@@ -78,25 +85,33 @@ plt.show()
 
 # Testing Example
 th = [2,2.5,3,3.5]
-I = cv.imread(testing_list[500],Clr_flag)
+loc = 1
+I = cv.imread(testing_list[1],Clr_flag)
 s = np.shape(I)
 Bbox = ut.get_bboxes_from_MOTChallenge(gt_file)
-frm = ut.frameIdfrom_filename(testing_list[500])
+for loc in range(len(testing_list)):
 
-m0,cbbox = getbboxmask(Bbox,frm,(s[0],s[1]))
+    frm = ut.frameIdfrom_filename(testing_list[loc])
 
-fig, axs = plt.subplots(2,3, figsize=(15, 6), facecolor='w', edgecolor='k')
-fig.subplots_adjust(hspace = .5, wspace=.001)
+    m0,cbbox = ut.getbboxmask(Bbox,frm,(s[0],s[1]))
+
+    if not cbbox==[]:
+        I = cv.imread(testing_list[loc],Clr_flag)
+        break
+
+fig, axs = plt.subplots(2,3, figsize=(15, 6), facecolor='w', edgecolor='g')
+fig.subplots_adjust(hspace = .5, wspace=.01)
 
 axs = axs.ravel()
 axs[0].imshow(I,cmap='gray')
-axs[0].set_title(testing_list[500])
+axs[0].set_title(testing_list[loc])
 
 for b in cbbox:
     rect = patches.Rectangle((b[0],b[2]),b[1]-b[0],b[3]-b[2],linewidth=1,edgecolor='r',facecolor='none')
     # Add the patch to the Axes
     axs[0].add_patch(rect)
 axs[1].imshow(m0,cmap='gray')
+axs[1].set_title('GT map')
 i= 2
 for a in th:
     mapBG = bg.foreground_from_GBGmodel(muBG,stdBG,I,th =a)

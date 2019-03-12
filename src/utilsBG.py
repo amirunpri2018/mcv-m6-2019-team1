@@ -79,16 +79,16 @@ def getGauss_bg(file_list, D=1 , gt_file = None):
     N = len(file_list)
 
     s = np.shape(cv.imread(file_list[0],Clr_flag))
-    #m0 = np.zeros((s[0],s[1],D),dtype=bool)
-    m0 = np.zeros((s[0],s[1]),dtype=bool)
+    m0 = np.zeros((s[0],s[1],D),dtype=bool)
+    #m0 = np.zeros((s[0],s[1]),dtype=bool)
     # initializing the cumalitive frame matrix
-    A = np.zeros((s[0],s[1]))
-    #A = np.zeros((s[0],s[1],D))
+    #A = np.zeros((s[0],s[1]))
+    A = np.zeros((s[0],s[1],D))
     #B = np.zeros((s[0],s[1]))
     #G = np.zeros((s[0],s[1]))
     #R = np.zeros((s[0],s[1]))
-    #ma = np.full((s[0],s[1],D), float(N))
-    ma = np.full((s[0],s[1]), float(N))
+    ma = np.full((s[0],s[1],D), float(N))
+    #ma = np.full((s[0],s[1]), float(N))
 
     # I. Loop to obtain mean
 
@@ -100,20 +100,23 @@ def getGauss_bg(file_list, D=1 , gt_file = None):
         frm = ut.frameIdfrom_filename(image_path)
         #Upload frame
         I= cv.imread(image_path,Clr_flag)
+        if D==1:
+            I = np.repeat(I[:, :, np.newaxis], D, axis=2)
         #print(np.shape(I))
 
         if gt_file:
             m0,_ = ut.getbboxmask(Bbox,frm,(s[0],s[1]))
-            #m0 = np.repmat(m0,1,1,D)
-
-        if D==1:
+            m0 = np.repeat(a[:, :, np.newaxis], D, axis=2)
+            print(np.shape(I))
+            print(np.shape(m0))
+        if D==1 or D==3:
             # Read the frame from the video and NOT the images
 
             np.place(I, m0, 0.0)
             ma -= m0
             # Adding frames values
             A+= I
-        if D==3:
+        if D==4:
             # Read the frame from the video and NOT the images
             bgr = cv.split(I)
             b = bgr[0]
@@ -130,33 +133,40 @@ def getGauss_bg(file_list, D=1 , gt_file = None):
             #A+= I
 
     # Do ma need to be float??
-    if D==1:
+    if D==1 or D==3:
         mu_bg = A/ma
+        m0 = np.zeros((s[0],s[1],D),dtype=bool)
+
     else:
         B = B/ma
         R = R/ma
         G =G/ma
         mu_bg = cv.merge((B,G,R))
 
-    #A = np.zeros((s[0],s[1],D))
-    A = np.zeros((s[0],s[1]))
+    A = np.zeros((s[0],s[1],D))
+    #A = np.zeros((s[0],s[1]))
     # II. Loop to obtain std
     # sqrt (1/N * sum((x-mu)^2))
     for i,image_path in enumerate(file_list, start=0):
         # get frame number
         frm = ut.frameIdfrom_filename(image_path)
         #Upload frame
-        I = (cv.imread(image_path,Clr_flag)-mu_bg)**2
+        I = cv.imread(image_path,Clr_flag)
+        if D==1:
+            I = np.repeat(I[:, :, np.newaxis], D, axis=2)
+
+        Ivar = (I-mu_bg)**2
+
         #print i
         if gt_file:
 
-            ma0,_ = ut.getbboxmask(Bbox,frm,(s[0],s[1]))
-            m0 = np.repmat(m0,1,1,D)
+            m0,_ = ut.getbboxmask(Bbox,frm,(s[0],s[1]))
+            m0 = np.repeat(a[:, :, np.newaxis], D, axis=2)
 
         if D==1 or D==3:
 
-            np.place(I, m0, 0.0)
-            A+= I
+            np.place(Ivar, m0, 0.0)
+            A+= Ivar
 
     #var_bg = A/ma
     std_bg = np.sqrt(A/ma)
