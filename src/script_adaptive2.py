@@ -34,16 +34,18 @@ if not os.path.isdir(output_dir+output_subdir):
 #print frame_list
 # training
 N =len(frame_list)
-d =3
-if d==1 or d==0:
-    Clr_flag = cv.IMREAD_GRAYSCALE
-else :
-    Clr_flag = cv.IMREAD_COLOR
+d =2
+COLOR_SPACE = cv.COLOR_BGR2HSV
+COLOR_CHANNELS = [0,1]
+# if d==1 or d==0:
+#     Clr_flag = cv.IMREAD_GRAYSCALE
+# else :
+#     Clr_flag = cv.IMREAD_COLOR
 #ffmpeg
 
 # I couldnt run it with 25% on my computer due to memory problem-
 #PercentPerTraining = 0.25
-Nt = int(N*0.02)
+Nt = int(N*0.25)
 #trainig_list = frame_list[:Nt]
 trainig_list = frame_list[:Nt]
 testing_list = frame_list[Nt:]
@@ -62,7 +64,7 @@ else:
     #[muBG,stdBG] = bg.getGauss_bg(trainig_list, D=d,gt_file = None)
     # BG_1G_GT/BG1G
     #gt_file = None
-    [muBG,stdBG] = bg.getGauss_bg(trainig_list, D=d,gt_file = gt_file)
+    [muBG,stdBG] = bg.getGauss_bg(trainig_list, D=d,gt_file = gt_file, color_space=COLOR_SPACE,color_channels= COLOR_CHANNELS)
     if d==1:
         muBG =np.squeeze(muBG, axis=2)
         stdBG =np.squeeze(stdBG, axis=2)
@@ -82,6 +84,16 @@ ax2 = plt.subplot(212)
 if d==3:
     ax1.imshow(muBG,vmin=0,vmax=255)
     ax2.imshow(stdBG,vmin=0,vmax=255)
+elif d==2:
+
+    #muBG2 = muBG
+    #stdBG2 = stdBG
+    s = np.shape(muBG)
+    muBG2 = np.dstack((muBG,np.zeros((s[0],s[1]))))
+    stdBG2 = np.dstack((stdBG,np.zeros((s[0],s[1]))))
+
+    ax1.imshow(muBG2,vmin=0,vmax=255)
+    ax2.imshow(stdBG2,vmin=0,vmax=255)
 else:
     ax1.imshow(muBG,cmap='gray')
     ax2.imshow(stdBG,cmap='gray')
@@ -94,7 +106,8 @@ plt.show()
 # Testing Example
 th = [2,2.5,3,3.5]
 loc = 1
-I = cv.imread(testing_list[1],Clr_flag)
+I = ut.getImg_D(testing_list[1],d,color_space = COLOR_SPACE)
+
 s = np.shape(I)
 Bbox = ut.get_bboxes_from_MOTChallenge(gt_file)
 for loc in range(len(testing_list)):
@@ -104,14 +117,28 @@ for loc in range(len(testing_list)):
     m0,cbbox = ut.getbboxmask(Bbox,frm,(s[0],s[1]))
 
     if not cbbox==[]:
-        I = cv.imread(testing_list[loc],Clr_flag)
+        #I = cv.imread(testing_list[loc],Clr_flag)
+        I = ut.getImg_D(testing_list[loc],d,color_space = COLOR_SPACE,color_channels= COLOR_CHANNELS)
+        if d==1:
+            I = np.squeeze(I, axis=2)
+        #muBG,stdBG = bg.adaptive_BG(muBG,stdBG,I,p=0.5,th=2,D=1)
         break
 
 fig, axs = plt.subplots(2,3, figsize=(15, 6), facecolor='w', edgecolor='g')
 fig.subplots_adjust(hspace = .5, wspace=.01)
 
 axs = axs.ravel()
-axs[0].imshow(I,cmap='gray')
+
+
+if d==2:
+
+    s = np.shape(I)
+    I2 = np.dstack((I,np.zeros((s[0],s[1]))))
+
+    axs[0].imshow(I2,vmin=0,vmax=255)
+    #ax2.imshow(stdBG2,vmin=0,vmax=255)
+else:
+    axs[0].imshow(I,cmap='gray')
 axs[0].set_title(testing_list[loc])
 
 for b in cbbox:

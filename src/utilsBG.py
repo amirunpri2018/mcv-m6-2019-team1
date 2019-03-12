@@ -163,12 +163,14 @@ def foreground_from_GBGmodel(bg_mu,bg_std,I,th =2):
     fg_map = np.zeros(s, dtype=bool )
     # centered Image with repect to mu of the Background
     Ic = np.abs(I-bg_mu)
-
-    for d in range(s[2]):
-        fg_map[Ic[...,d]>=th*(bg_std[...,d]+2),d] = True
-
+    if len(s)==2:
+        fg_map[Ic>=th*(bg_std+2)] = True
+    else:
+        for d in range(s[2]):
+            fg_map[Ic[...,d]>=th*(bg_std[...,d]+2),d] = True
+        fg_map = np.any(fg_map,axis=2)
     #np.any(fg_map,axis=2)
-    return np.any(fg_map,axis=2)
+    return fg_map
 
 
 # State of the art background subtraction:
