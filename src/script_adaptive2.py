@@ -34,8 +34,8 @@ if not os.path.isdir(output_dir+output_subdir):
 #print frame_list
 # training
 N =len(frame_list)
-d =1
-if d==1:
+d =3
+if d==1 or d==0:
     Clr_flag = cv.IMREAD_GRAYSCALE
 else :
     Clr_flag = cv.IMREAD_COLOR
@@ -56,14 +56,19 @@ print("Testing: # {}".format(len(testing_list)))
 if os.path.isfile(output_dir+output_subdir+exp_name+'_mu.npy'):
     muBG = np.load(output_dir+output_subdir+exp_name+'_mu.npy')
     stdBG = np.load(output_dir+output_subdir+exp_name+'_std.npy')
+
 else:
     # BG_1G/BG1G
     #[muBG,stdBG] = bg.getGauss_bg(trainig_list, D=d,gt_file = None)
     # BG_1G_GT/BG1G
-    gt_file = None
+    #gt_file = None
     [muBG,stdBG] = bg.getGauss_bg(trainig_list, D=d,gt_file = gt_file)
-    np.save(output_dir+output_subdir+exp_name+'_mu.npy',muBG)
-    np.save(output_dir+output_subdir+exp_name+'_std.npy',stdBG)
+    if d==1:
+        muBG =np.squeeze(muBG, axis=2)
+        stdBG =np.squeeze(stdBG, axis=2)
+    #np.save(output_dir+output_subdir+exp_name+'_mu.npy',muBG)
+    #np.save(output_dir+output_subdir+exp_name+'_std.npy',stdBG)
+
 
 
 """
@@ -74,9 +79,12 @@ ax1 = plt.subplot(211)
     #ax3 = plt.subplot(312)
 ax2 = plt.subplot(212)
 
-
-ax1.imshow(muBG,cmap='gray')
-ax2.imshow(stdBG,cmap='gray')
+if d==3:
+    ax1.imshow(muBG,vmin=0,vmax=255)
+    ax2.imshow(stdBG,vmin=0,vmax=255)
+else:
+    ax1.imshow(muBG,cmap='gray')
+    ax2.imshow(stdBG,cmap='gray')
 
 ax1.set_title("Mean BG model - over "+str(len(trainig_list))+" frames")
 ax2.set_title("Std noise BG model")

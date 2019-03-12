@@ -12,7 +12,8 @@ import itertools
 import bs4
 import numpy as np
 import pandas as pd
-
+#image
+import cv2 as cv
 #import imageio
 from skimage import exposure
 import evaluation.evaluation_funcs as evalf
@@ -561,3 +562,24 @@ def atoi(text):
 
 def natural_keys(text):
     return [ atoi(c) for c in re.split('(\d+)',text) ]
+
+def getImg_D(im_path,D=1,color_space=None,color_channels=None):
+    # color_channels len ==D
+
+
+    if D==1 and color_space is None:
+        Clr_flag = cv.IMREAD_GRAYSCALE
+    else :
+        Clr_flag = cv.IMREAD_COLOR
+
+    I = cv.imread(im_path,Clr_flag)
+
+    if color_space:
+        I = cv.cvtColor(I,color_space)
+
+    if color_channels:
+        I = I[...,color_channels]
+
+    if D==1:
+        I = np.repeat(I[:, :, np.newaxis], D, axis=2)
+    return I
