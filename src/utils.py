@@ -504,7 +504,7 @@ def get_files_from_dir2(cdir,ext = None):
             file_list.append(os.path.join(cdir,file_name))
 
     # sorting with respect to frame number
-    frame_list.sort(key=natural_keys)
+    file_list.sort(key=natural_keys)
     return file_list
 
 def get_bboxes_from_MOTChallenge(fname):
@@ -541,17 +541,23 @@ def getbboxmask(BboxList,frm,imsize):
 
     bs = BboxList.loc[BboxList['frame']==frm]
     mask = np.zeros(imsize,dtype =bool)
-
+    bbox_list = list()
     if not bs.empty:
         for b in bs.itertuples():
             #print(b)
-            a = range(int(getattr(b, "xmin")),int(getattr(b, "xmax")))
-            v = range(int(getattr(b, "ymin")),int(getattr(b, "ymax")))
+            xmin = int(getattr(b, "xmin"))
+            xmax = int(getattr(b, "xmax"))
+            ymin = int(getattr(b, "ymin"))
+            ymax = int(getattr(b, "ymax"))
+            a = range(xmin,xmax)
+            v = range(ymin,ymax)
             xx, yy = np.meshgrid( a, v )
-
+            print([xmin,xmax,ymin,ymax])
+            print(type([xmin,xmax,ymin,ymax]))
+            bbox_list.append([xmin,xmax,ymin,ymax])
             mask[yy,xx] = np.ones(np.shape(xx),dtype =bool)
 
-    return mask
+    return mask,bbox_list
 
 def atoi(text):
     return int(text) if text.isdigit() else text
