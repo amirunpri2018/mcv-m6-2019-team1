@@ -22,17 +22,24 @@ Estimating on 25% of the video frame
 frames_dir = '../frames'
 gt_file = '../datasets/AICity_data/train/S03/c010/gt/gt.txt'
 frame_list = ut.get_files_from_dir2(frames_dir,ext = '.jpg')
-frame_list.sort(key=ut.natural_keys)
+
+#frame_list.sort(key=ut.natural_keys)
 
 output_dir = '../week2_results/'
-output_subdir = 'BG_3G/'
+output_subdir = 'BG_1G/'
+
+trial_name = 'BG1G'
+
 if not os.path.isdir(output_dir+output_subdir):
     os.mkdir(output_dir+output_subdir)
+
+
+
 #frame_list = ut.get_files_from_dir(frames_dir, excl_ext='jpg')
 #print frame_list
 # training
 N =len(frame_list)
-d =3
+d =1
 if d==1:
     Clr_flag = cv.IMREAD_GRAYSCALE
 else :
@@ -52,14 +59,20 @@ print("Testing: # {}".format(len(testing_list)))
 
 
 #[muBG,stdBG] = bg.getGauss_bg2(trainig_list, D=3,gt_file = gt_file)
-[muBG2,stdBG2] = bg.getGauss_bg2(trainig_list, D=d,gt_file = None,output_dir = output_dir+output_subdir)
-#[muBG,stdBG] = bg.getGauss_bg2(trainig_list, D=1)
+#[muBG2,stdBG2] = bg.getGauss_bg2(trainig_list, D=d,gt_file = None,output_dir = output_dir+output_subdir)
+[muBG,stdBG] = bg.getGauss_bg2(trainig_list, D=1)
+# save BACKGROUND MODEL
+#=====================
+cv.imwrite(output_dir+output_subdir+trial_name+'_mu.png',muBG)
+cv.imwrite(output_dir+output_subdir+trial_name+'_std.png',stdBG)
+
+
 # Output 1
 #Out1 = cv.merge((muBG,stdBG,np.zeros(np.shape(muBG))))
-Out2 = cv.merge((muBG2,stdBG2,np.zeros(np.shape(muBG2))))
+#Out2 = cv.merge((muBG2,stdBG2,np.zeros(np.shape(muBG2))))
 #print(np.shape(Out1))
 #cv.imwrite(output_dir+'BG_1gC_masked.png',Out1)
-cv.imwrite(output_dir+output_subdir+'BG.png',Out2)
+#cv.imwrite(output_dir+output_subdir+'BG.png',Out2)
 #np.save(output_dir+'Bg_1g',Out1)
 
 """
@@ -71,8 +84,8 @@ ax1 = plt.subplot(211)
 ax2 = plt.subplot(212)
 
 
-ax1.imshow(muBG2,cmap='gray')
-ax2.imshow(stdBG2,cmap='gray')
+ax1.imshow(muBG,cmap='gray')
+ax2.imshow(stdBG,cmap='gray')
 
 ax1.set_title("Mean BG model - #"+str(len(trainig_list))+" frames")
 ax2.set_title("Std noise BG model")

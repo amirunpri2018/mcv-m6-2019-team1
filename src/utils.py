@@ -503,6 +503,8 @@ def get_files_from_dir2(cdir,ext = None):
         if file_name.endswith(ext):
             file_list.append(os.path.join(cdir,file_name))
 
+    # sorting with respect to frame number
+    frame_list.sort(key=natural_keys)
     return file_list
 
 def get_bboxes_from_MOTChallenge(fname):
