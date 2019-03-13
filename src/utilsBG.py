@@ -9,7 +9,7 @@ import cv2 as cv
 
 import matplotlib
 
-from src.map import get_avg_precision_at_iou
+#from src.map import get_avg_precision_at_iou
 
 matplotlib.use('TkAgg')
 
@@ -39,7 +39,7 @@ import scipy.stats as stats
 #         writer.grab_frame()
 
 
-def adaptive_BG(bg_mu,bg_std,I,p=0.5,th=2,D=1):
+def get_BG(bg_mu,bg_std,I,th=3,adaptive =False, p=0.5):
         """
         Computes Gaussian Background model.
 
@@ -51,17 +51,18 @@ def adaptive_BG(bg_mu,bg_std,I,p=0.5,th=2,D=1):
         : th - alpha parameters - the descision threshold
         : p : [0,1]- the weight between the past model and the current frame
         """
-        fg_map = foreground_from_GBGmodel(bg_mu,bg_std,I,th)
-        bg_var = np.sqrt(bg_std)
+        fg_map = foreground_from_GBGmodel(bg_mu,bg_std,I,th = th)
+        if adaptive:
+            bg_var = np.sqrt(bg_std)
 
-        # Loop on every pixel that was found as Background
-        bg_list = np.where(~fg_map)
-        for bg_pix in bg_list:
-            bg_mu[bg_pix[0]][bg_pix[1]] = p*I[bg_pix[0]][bg_pix[1]]+(1-p)*bg_mu[bg_pix[0]][bg_pix[1]]
-            bg_var[bg_pix[0]][bg_pix[1]] = p*(I[bg_pix[0]][bg_pix[1]]-bg_mu[bg_pix[0]][bg_pix[1]])**2+(1-p)*bg_var[bg_pix[0]][bg_pix[1]]
+            # Loop on every pixel that was found as Background
+            bg_list = np.where(~fg_map)
+            for bg_pix in bg_list:
+                bg_mu[bg_pix[0]][bg_pix[1]] = p*I[bg_pix[0]][bg_pix[1]]+(1-p)*bg_mu[bg_pix[0]][bg_pix[1]]
+                bg_var[bg_pix[0]][bg_pix[1]] = p*(I[bg_pix[0]][bg_pix[1]]-bg_mu[bg_pix[0]][bg_pix[1]])**2+(1-p)*bg_var[bg_pix[0]][bg_pix[1]]
 
-        bg_std = np.sqrt(bg_var)
-        return bg_mu,bg_std
+            bg_std = np.sqrt(bg_var)
+        return fg_map,bg_mu,bg_std
 
 
 def getGauss_bg(file_list, D=1 ,color_space = None,color_channels=None, gt_file = None):
@@ -73,12 +74,6 @@ def getGauss_bg(file_list, D=1 ,color_space = None,color_channels=None, gt_file 
     : gt_file , ignoring bbox of foreground when creating the bg model
     :return: mu_bg -  mean, var_bg - chose to work with var and not std var = std^2 !!
     """
-
-    # if D==1:
-    #     Clr_flag = cv.IMREAD_GRAYSCALE
-    # else :
-    #     Clr_flag = cv.IMREAD_COLOR
-
 
     # if there is bbox to ignore fron
     if gt_file:
@@ -204,8 +199,15 @@ def connected_components(mask0, area_min=None, area_max=None, ff_min=None, ff_ma
         filling_ratio = region.filled_area / region.bbox_area
 
         # Filter by area:
-        if area_min is not None and area_max is not None:
-            if area_min <= region.bbox_area <= area_max:
+        if area_min is not None:
+            if area_min <= region.bbox_area:
+                minr, minc, maxr, maxc = region.bbox
+            else:
+                del (minr, minc, maxr, maxc)
+                continue
+
+        if area_max is not None:
+            if region.bbox_area <= area_max:
                 minr, minc, maxr, maxc = region.bbox
             else:
                 del (minr, minc, maxr, maxc)

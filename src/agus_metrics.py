@@ -50,7 +50,7 @@ F_MORPH = True
 F_CONN_COMP = True
 
 # Connected components:
-AREA_MIN = None
+AREA_MIN = 4000
 AREA_MAX = None
 FF_MIN = None
 FF_MAX = None
@@ -154,6 +154,10 @@ bboxTP_tot = []
 bboxFN_tot = []
 bboxFP_tot = []
 
+bboxTP_tot = 0
+bboxFN_tot = 0
+bboxFP_tot = 0
+
 Bbox = ut.get_bboxes_from_MOTChallenge(gt_file)  #Ground truth Bboxes
 
 for loc, filename in enumerate(testing_list):
@@ -163,6 +167,7 @@ for loc, filename in enumerate(testing_list):
                                 color_channels = COLOR_CHANNELS)
     if d==1:
         I =np.squeeze(I,axis=2)
+        I = np.squeeze(I, axis=2)
 
     frm = ut.frameIdfrom_filename(testing_list[loc])  # Get the number of the frame from filename
 
@@ -171,7 +176,7 @@ for loc, filename in enumerate(testing_list):
     _, cbbox = ut.getbboxmask(Bbox, frm, (s[0], s[1]))  # List of GT Bboxes per specific frame
     #m0, cbbox = ut.getbboxmask(Bbox, frm, (s[0], s[1]))
 
-    mapBG = bg.foreground_from_GBGmodel(muBG,stdBG,I,th =3.5) # Mask of foreground for specific frame
+    mapBG = bg.foreground_from_GBGmodel(muBG,stdBG,I,th =11) # Mask of foreground for specific frame
 
     #plt.imshow(mapBG)
     #plt.show()
@@ -221,14 +226,30 @@ for loc, filename in enumerate(testing_list):
     bboxFN_tot += bboxFN
     bboxFP_tot += bboxFP
 
-    precision = ut.precision(bboxTP_tot, bboxFP_tot)
-    recall = ut.recall(bboxTP_tot, bboxFN_tot)
-    fsc = ut.fscore(bboxTP_tot, bboxFP_tot, bboxFN_tot)
+precision = ut.precision(bboxTP_tot, bboxFP_tot)
+recall = ut.recall(bboxTP_tot, bboxFN_tot)
+fsc = ut.fscore(bboxTP_tot, bboxFP_tot, bboxFN_tot)
 
+print('Programme ended. Prec, recall, fscore:')
+print(precision, recall, fsc)
+
+plt.figure()
 plt.plot(fscore_tot)
-plt.plot(iou_tot)
-plt.plot(map_tot)
+plt.title('Fscore in time')
+plt.xlabel('Frame number')
+plt.savefig('../figures/w2/alpha15/fscore_time.png')
 
+plt.figure()
+plt.plot(iou_tot)
+plt.title('IoU in time')
+plt.xlabel('Frame number')
+plt.savefig('../figures/w2/alpha15/IoU_time.png')
+
+plt.figure()
+plt.plot(map_tot)
+plt.title('mAP in time')
+plt.xlabel('Frame number')
+plt.savefig('../figures/w2/alpha15/mAP_time.png')
 
     #if not cbbox==[]:
     #    I = cv.imread(testing_list[loc],Clr_flag)

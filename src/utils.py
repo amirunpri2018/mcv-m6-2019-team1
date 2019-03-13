@@ -330,6 +330,13 @@ def mapk(actual, predicted, k=10):
     return np.mean([apk(a, p, k) for a, p in zip(actual, predicted)])
     #return np.mean([apk_iou(a, p, k) for a, p in zip(actual, predicted)])
 
+def map_precision_recall (precision_list, recall_list):
+
+    x = np.linspace(recall_list[0], recall_list[-1], 11)
+
+    y = np.interp(x, recall_list, precision_list)
+
+    return np.sum(y).astype(np.float) / 11
 
 
 def get_files_from_dir(directory, excl_ext=None):
@@ -618,7 +625,7 @@ def atoi(text):
 def natural_keys(text):
     return [ atoi(c) for c in re.split('(\d+)',text) ]
 
-def getImg_D(im_path,D=1,color_space=None,color_channels=None):
+def getImg_D(im_path,D=1,color_space=None,color_channels=[]):
     # color_channels len ==D
 
 
@@ -628,6 +635,7 @@ def getImg_D(im_path,D=1,color_space=None,color_channels=None):
         Clr_flag = cv.IMREAD_COLOR
 
     I = cv.imread(im_path,Clr_flag)
+
     if color_space:
         I = cv.cvtColor(I,color_space)
 
@@ -640,3 +648,17 @@ def getImg_D(im_path,D=1,color_space=None,color_channels=None):
 
 
     return I
+
+def plot_bboxes(img, l_bboxes, title=''):
+    fig, ax = plt.subplots(figsize=(10, 6))
+    ax.imshow(img)
+
+    colors = 'bgrcmykw'
+
+    for bboxes in l_bboxes:
+        color = colors[np.random.choice(len(colors))]
+        for bbox in bboxes:
+            rect = patches.Rectangle((bbox[0], bbox[1]), bbox[2] - bbox[0], bbox[3] - bbox[1], linewidth=1, edgecolor=color, facecolor='none')
+            # Add the patch to the Axes
+            ax.add_patch(rect)
+            ax.set
