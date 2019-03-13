@@ -330,6 +330,13 @@ def mapk(actual, predicted, k=10):
     return np.mean([apk(a, p, k) for a, p in zip(actual, predicted)])
     #return np.mean([apk_iou(a, p, k) for a, p in zip(actual, predicted)])
 
+def map_precision_recall (precision_list, recall_list):
+
+    x = np.linspace(recall_list[0], recall_list[-1], 11)
+
+    y = np.interp(x, recall_list, precision_list)
+
+    return np.sum(y).astype(np.float) / 11
 
 
 def get_files_from_dir(directory, excl_ext=None):

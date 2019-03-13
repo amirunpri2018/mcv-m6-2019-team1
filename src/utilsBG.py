@@ -288,8 +288,15 @@ def connected_components(mask0, area_min=None, area_max=None, ff_min=None, ff_ma
         filling_ratio = region.filled_area / region.bbox_area
 
         # Filter by area:
-        if area_min is not None and area_max is not None:
-            if area_min <= region.bbox_area <= area_max:
+        if area_min is not None:
+            if area_min <= region.bbox_area:
+                minr, minc, maxr, maxc = region.bbox
+            else:
+                del (minr, minc, maxr, maxc)
+                continue
+
+        if area_max is not None:
+            if region.bbox_area <= area_max:
                 minr, minc, maxr, maxc = region.bbox
             else:
                 del (minr, minc, maxr, maxc)
