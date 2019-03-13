@@ -52,7 +52,6 @@ FF_MAX = None
 FR_MIN = None
 PLOT_BBOX = False
 
-
 def main():
     """
     Function to compute the metrics for the background and foreground

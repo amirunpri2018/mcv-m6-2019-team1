@@ -17,10 +17,13 @@ using different statistical models and compute the metrics to compare them.
 
 The code is structured in the following way:
 
-- `src` folder with the sources code. In this directory a new package is 
-created for each week.
+- `src` folder with the sources code. Inside this folder, you will find:
+    - `weeks` package, with one package created for each week.
+    - `utils` package, with different modules of useful functions (*Work in progress*).
+    - `metrics` module, with different metrics to measure the performance of
+    our experimentss (*Work in progress*).
 
-- `data` folder contains the data provided with the code.
+- `data` folder contains the data provided with the codes (*Work in progress*).
 
 - `output` folder contains the output of each week. Each subfolder corresponds
 to each week.
