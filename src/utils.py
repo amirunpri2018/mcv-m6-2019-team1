@@ -618,7 +618,7 @@ def atoi(text):
 def natural_keys(text):
     return [ atoi(c) for c in re.split('(\d+)',text) ]
 
-def getImg_D(im_path,D=1,color_space=None,color_channels=None):
+def getImg_D(im_path,D=1,color_space=None,color_channels=[]):
     # color_channels len ==D
 
 
@@ -628,6 +628,7 @@ def getImg_D(im_path,D=1,color_space=None,color_channels=None):
         Clr_flag = cv.IMREAD_COLOR
 
     I = cv.imread(im_path,Clr_flag)
+
     if color_space:
         I = cv.cvtColor(I,color_space)
 
@@ -640,3 +641,17 @@ def getImg_D(im_path,D=1,color_space=None,color_channels=None):
 
 
     return I
+
+def plot_bboxes(img, l_bboxes, title=''):
+    fig, ax = plt.subplots(figsize=(10, 6))
+    ax.imshow(img)
+
+    colors = 'bgrcmykw'
+
+    for bboxes in l_bboxes:
+        color = colors[np.random.choice(len(colors))]
+        for bbox in bboxes:
+            rect = patches.Rectangle((bbox[0], bbox[1]), bbox[2] - bbox[0], bbox[3] - bbox[1], linewidth=1, edgecolor=color, facecolor='none')
+            # Add the patch to the Axes
+            ax.add_patch(rect)
+            ax.set
