@@ -38,7 +38,11 @@ def precision(tp, fp):
     :param fp: False positives
     :return: Precision
     """
-    return tp * 1.0 / (tp + fp)
+
+    if tp==0 and fp==0:
+        return 1
+    else:
+        return tp * 1.0 / (tp + fp)
 
 
 def recall(tp, fn):
@@ -49,7 +53,11 @@ def recall(tp, fn):
     :param fn: False negatives
     :return: Recall
     """
-    return tp * 1.0 / (tp + fn)
+
+    if tp==0 and fn==0:
+        return 1
+    else:
+        return tp * 1.0 / (tp + fn)
 
 
 def fscore(tp, fp, fn):
@@ -222,13 +230,58 @@ def bbox_iou(bbox_a, bbox_b):
 
 def iterate_iou(bboxes_result, bboxes_gt):
 
-    iou = []
-    for bbox, gt in itertools.product(bboxes_result, bboxes_gt):
-        iou.append(bbox_iou(bbox, gt))
+    if not any(bboxes_result) and not any(bboxes_gt):
+        return np.nan
 
-    iou = np.asarray(iou)
+    if not any(bboxes_result) and any(bboxes_gt):
+        return 0
 
-    return sum(iou) / len(iou)
+    if any(bboxes_result) and not any(bboxes_gt):
+        return 0
+
+    else:
+        iou = []
+        for bbox, gt in itertools.product(bboxes_result, bboxes_gt):
+            iou.append(bbox_iou(bbox, gt))
+
+        iou = np.asarray(iou)
+
+        return sum(iou) / len(iou)
+
+def apk_iou(actual, predicted, k=10):
+
+    if k < len(predicted):
+        predicted = predicted[:k]
+
+    score = 0.0
+    num_hits = 0.0
+
+    max_iou = []
+
+    for g, gt in enumerate(actual):
+        iou = []
+        for p, pred in enumerate(predicted):
+
+            iou.append(bbox_iou(gt, pred))
+
+        win_p = np.argmax(iou)
+        win_iou = np.max(iou)
+
+        del predicted[win_p]
+
+    max_iou.append(win_iou)
+
+    for i, p in enumerate(max_iou):
+
+        if p > 0.5:
+            num_hits += 1.0
+            score += num_hits / (i + 1.0)
+
+    if not any(actual):
+        return 0.0
+
+    return score / min(len(actual), k)
+
 
 
 def apk(actual, predicted, k=10):
@@ -248,6 +301,7 @@ def apk(actual, predicted, k=10):
 
     score = 0.0
     num_hits = 0.0
+
 
     for i, p in enumerate(predicted):
         if p in actual and p not in predicted[:i]:
@@ -274,7 +328,7 @@ def mapk(actual, predicted, k=10):
     :return score: The mean average precision at k over the input lists
     """
     return np.mean([apk(a, p, k) for a, p in zip(actual, predicted)])
-
+    #return np.mean([apk_iou(a, p, k) for a, p in zip(actual, predicted)])
 
 
 
@@ -552,7 +606,8 @@ def getbboxmask(BboxList,frm,imsize):
             ymax = int(getattr(b, "ymax"))
             xx, yy = np.meshgrid( range(xmin,xmax), range(ymin,ymax) )
 
-            bbox_list.append([xmin,xmax,ymin,ymax])
+            bbox_list.append([xmin,ymin,xmax,ymax])
+            # bbox_list.append([xmin,xmax,ymin,ymax])
             mask[yy,xx] = np.ones(np.shape(xx),dtype =bool)
 
     return mask,bbox_list

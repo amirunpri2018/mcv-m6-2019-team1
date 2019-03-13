@@ -1,15 +1,22 @@
 import numpy as np
 import utils as ut
+import matplotlib.patches as mpatches
 # Read frames from video
 
 import cv2 as cv
 
 import matplotlib
+
+from src.map import get_avg_precision_at_iou
+
 matplotlib.use('TkAgg')
 
 import matplotlib.animation as manimation
 # For visulization
 import matplotlib.pyplot as plt
+from skimage.measure import label, regionprops
+import evaluation.evaluation_funcs as evalf
+
 import scipy.stats as stats
 
 # mu = 0
@@ -60,8 +67,8 @@ def getGauss_bg(file_list, D=1 ,color_space = None,color_channels=None, gt_file 
     Computes Gaussian Background model.
 
     :file_list: list of all images used to estimate the bg model
-    :D: False positives
-    : git_file , ignoring bbox of foreground when creating the bg model
+    :D: Dimension (1, 2, 3)
+    : gt_file , ignoring bbox of foreground when creating the bg model
     :return: mu_bg -  mean, var_bg - chose to work with var and not std var = std^2 !!
     """
 
@@ -159,16 +166,18 @@ def foreground_from_GBGmodel(bg_mu,bg_std,I,th =2):
 
     """
     s = np.shape(I)
-    #fg_map = np.zeros((s[0],s[1]), dtype=bool )
-    fg_map = np.zeros(s, dtype=bool )
+    # fg_map = np.zeros((s[0],s[1]), dtype=bool )
+    fg_map = np.zeros(s, dtype=bool)
     # centered Image with repect to mu of the Background
-    Ic = np.abs(I-bg_mu)
-
-    for d in range(s[2]):
-        fg_map[Ic[...,d]>=th*(bg_std[...,d]+2),d] = True
-
-    #np.any(fg_map,axis=2)
-    return np.any(fg_map,axis=2)
+    Ic = np.abs(I - bg_mu)
+    if len(s) == 2:
+        fg_map[Ic >= th * (bg_std + 2)] = True
+    else:
+        for d in range(s[2]):
+            fg_map[Ic[..., d] >= th * (bg_std[..., d] + 2), d] = True
+        fg_map = np.any(fg_map, axis=2)
+    # np.any(fg_map,axis=2)
+    return fg_map
 
 
 # State of the art background subtraction:
@@ -248,3 +257,101 @@ def background_subtractor_LSBP(cap):
             break
     cap.release()
     cv.destroyAllWindows()
+
+
+    # centered Image with repect to mu of the Background
+    Ic = np.abs(I-bg_mu)
+    foreground_map[Ic>=th*(bg_std+2)] = True
+    return foreground_map
+
+
+def connected_components(mask0, area_min=None, area_max=None, ff_min=None, ff_max=None, fr_min=None,
+                         plot=False, fname=None, directory=None):
+    label_image = label(mask0)
+    bbox_list = []
+
+    if plot == True:
+        fig, ax = plt.subplots(figsize=(10, 6))
+        ax.imshow(label_image)
+
+    for region in regionprops(label_image):
+
+        minr, minc, maxr, maxc = map(lambda x: int(x), region.bbox)
+        h = maxr - minr
+        w = maxc - minc
+        form_factor = w / h
+        filling_ratio = region.filled_area / region.bbox_area
+
+        # Filter by area:
+        if area_min is not None and area_max is not None:
+            if area_min <= region.bbox_area <= area_max:
+                minr, minc, maxr, maxc = region.bbox
+            else:
+                del (minr, minc, maxr, maxc)
+                continue
+
+        # Filter by form factor:
+        if ff_min is not None and ff_max is not None:
+            if ff_min < form_factor < ff_max:
+                minr, minc, maxr, maxc = region.bbox
+            else:
+                del (minr, minc, maxr, maxc)
+                continue
+
+        # Filter by filling ratio:
+        if fr_min is not None:
+            if filling_ratio > fr_min:
+                minr, minc, maxr, maxc = region.bbox
+            else:
+                del (minr, minc, maxr, maxc)
+                continue
+
+        bbox_list.append([minc, minr, maxc, maxr])
+        # bbox_list.append([minc, minr, maxc - minc, maxr - minr])
+
+
+        if plot == True:
+            rect = mpatches.Rectangle((minc, minr), maxc - minc, maxr - minr,
+                                      fill=False, edgecolor='red', linewidth=2)
+            ax.add_patch(rect)
+
+    plt.show()
+
+    if fname is not None and directory is not None:
+        bboxes_to_file(bbox_list, fname, directory, sign_types=None)
+
+    return bbox_list
+
+
+def compute_metrics_general(gt, bboxes, k=10, iou_thresh=0.5):
+    """
+    Compute Fscore, IoU, Map of two lists of Bounding Boxes.
+
+    :param gt: list of GT bounding boxes
+    :param bboxes: list of result Bboxes
+    :param k: Map at k
+    :return: Noisy Bboxes, Fscore, IoU, MaP
+    """
+
+    bboxTP, bboxFN, bboxFP = evalf.performance_accumulation_window(bboxes, gt, iou_thresh)
+
+    #print(bboxTP, bboxFN, bboxFP )
+
+    """
+    Compute F-score of GT against modified bboxes PER FRAME NUMBER
+    """
+    fscore_val = ut.fscore(bboxTP, bboxFN, bboxFP)
+
+    """
+    Compute IoU of GT against modified Bboxes PER FRAME NUMBER:
+    """
+
+    iou = ut.iterate_iou(bboxes, gt)
+
+    """
+    Compute mAP of GT against modified bboxes PER FRAME NUMBER:
+    """
+
+    map = ut.mapk(bboxes, gt, k)
+
+    return (fscore_val, iou, map, bboxTP, bboxFN, bboxFP)
