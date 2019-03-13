@@ -10,9 +10,9 @@ import matplotlib.patches as patches
 import numpy as np
 
 # Local libraries
-import src.utils as ut
-import src.utilsBG as bg
-from src import weeks as w
+import utils as ut
+import utilsBG as bg
+import src
 
 
 # Some constant for the script
@@ -20,11 +20,13 @@ N = 0.01
 GT = 'no'
 DIM = 3
 EXP_NAME = '{}GT_N{}_DIM{}'.format(GT, N, DIM)
+TASK = 'task2'
+WEEK = 'week2'
 
 
-if __name__ == '__main__':
+def main():
     """
-    Script to compute the background and foreground of a sequence
+    Function to compute the background and foreground of a sequence
     of frames using a Gaussian distribution method.
 
     This script uses the 100*N % first frames for training and the
@@ -32,15 +34,16 @@ if __name__ == '__main__':
 
     Meaningful variables are defined at the beginning of this script.
     """
-    # Estimating on 25% of the video frame
-    # - Estimation of the background without consideration of the foreground in the gt.txt
-    # - Estimation " " with respect to the BBox - ignoring them from the calculation
 
     # Set useful directories
-    frames_dir = os.path.join(w.ROOT_DIR, 'frames')
-    results_dir = os.path.join(w.OUTPUT_DIR, 'week2', 'task1', EXP_NAME)
+    frames_dir = os.path.join(
+        src.ROOT_DIR,
+        'datasets',
+        'm6_week1_frames',
+        'frames')
+    results_dir = os.path.join(src.OUTPUT_DIR, WEEK, TASK, EXP_NAME)
     # Ground truth file path
-    gt_file = os.path.join(w.ROOT_DIR,
+    gt_file = os.path.join(src.ROOT_DIR,
                            'datasets', 'AICity_data', 'train', 'S03',
                            'c010', 'gt', 'gt.txt')
 
@@ -149,3 +152,7 @@ if __name__ == '__main__':
 
     plt.savefig(os.path.join(results_dir, 'thresholds.png'))
     print("Done!")
+
+
+if __name__ == '__main__':
+    main()

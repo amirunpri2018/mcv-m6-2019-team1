@@ -25,6 +25,7 @@ created for each week.
 - `output` folder contains the output of each week. Each subfolder corresponds
 to each week.
 
+To run each task you need to uncomment the line from the `src/main.py` file.
 
 ## Setup
 

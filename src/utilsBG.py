@@ -110,6 +110,9 @@ def getGauss_bg(file_list, D=1 ,color_space = None,color_channels=None, gt_file 
 
         np.place(I, m0, 0.0)
         ma -= m0
+
+        while I.shape[-1] == 1:
+            I = np.squeeze(I, axis=len(I.shape) - 1)
         # Adding frames values
         A+= I
 
@@ -126,7 +129,8 @@ def getGauss_bg(file_list, D=1 ,color_space = None,color_channels=None, gt_file 
         frm = ut.frameIdfrom_filename(image_path)
         #Upload frame
         I = ut.getImg_D(image_path,D,color_space,color_channels)
-
+        while I.shape[-1] == 1:
+            I = np.squeeze(I, axis=len(I.shape) - 1)
         Ivar = (I-mu_bg)**2
 
         #print i
