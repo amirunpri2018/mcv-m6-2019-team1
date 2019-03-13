@@ -34,9 +34,9 @@ if not os.path.isdir(output_dir+output_subdir):
 #print frame_list
 # training
 N =len(frame_list)
-d =2
-COLOR_SPACE = cv.COLOR_BGR2HSV
-COLOR_CHANNELS = [0,1]
+d =1
+COLOR_SPACE = None #cv.COLOR_BGR2HSV
+COLOR_CHANNELS = [] #[0,1]
 # if d==1 or d==0:
 #     Clr_flag = cv.IMREAD_GRAYSCALE
 # else :
@@ -45,7 +45,7 @@ COLOR_CHANNELS = [0,1]
 
 # I couldnt run it with 25% on my computer due to memory problem-
 #PercentPerTraining = 0.25
-Nt = int(N*0.25)
+Nt = int(N*0.01)
 #trainig_list = frame_list[:Nt]
 trainig_list = frame_list[:Nt]
 testing_list = frame_list[Nt:]
@@ -120,7 +120,9 @@ for loc in range(len(testing_list)):
         #I = cv.imread(testing_list[loc],Clr_flag)
         I = ut.getImg_D(testing_list[loc],d,color_space = COLOR_SPACE,color_channels= COLOR_CHANNELS)
         if d==1:
+            print(np.shape(I))
             I = np.squeeze(I, axis=2)
+            print(np.shape(I))
         #muBG,stdBG = bg.adaptive_BG(muBG,stdBG,I,p=0.5,th=2,D=1)
         break
 
