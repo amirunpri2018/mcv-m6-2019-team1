@@ -138,6 +138,10 @@ def getGauss_bg(file_list, D=1 ,color_space = None,color_channels=None, gt_file 
     #var_bg = A/ma
     std_bg = np.sqrt(A/ma)
 
+    if D == 1:
+        mu_bg = np.squeeze(mu_bg, axis=2)
+        std_bg = np.squeeze(std_bg, axis=2)
+
     return mu_bg,std_bg
 
 
@@ -250,3 +254,25 @@ def background_subtractor_LSBP(cap):
             break
     cap.release()
     cv.destroyAllWindows()
+
+
+
+
+
+def background_subtractor_MOG_facu(video_fname):
+
+    """
+    cap = cv.VideoCapture('vdo.avi')
+    """
+
+    cap = cv.VideoCapture(video_fname)
+    fgbg = cv.bgsegm.createBackgroundSubtractorMOG()
+    while(1):
+        ret, frame = cap.read()
+        yield fgbg.apply(frame)
+    #     cv.imshow('frame',fgmask)
+    #     k = cv.waitKey(30) & 0xff
+    #     if k == 27:
+    #         break
+    # cap.release()
+    # cv.destroyAllWindows()
