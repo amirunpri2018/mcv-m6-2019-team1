@@ -13,7 +13,7 @@ import numpy as np
 import pandas as pd
 
 # Local modules
-import utils as u
+import src.utils as u
 
 
 # Logger setup

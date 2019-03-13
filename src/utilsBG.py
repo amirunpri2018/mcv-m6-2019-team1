@@ -145,6 +145,10 @@ def getGauss_bg(file_list, D=1 ,color_space = None,color_channels=None, gt_file 
     #var_bg = A/ma
     std_bg = np.sqrt(A/ma)
 
+    if D == 1:
+        mu_bg = np.squeeze(mu_bg, axis=2)
+        std_bg = np.squeeze(std_bg, axis=2)
+
     return mu_bg,std_bg
 
 
@@ -169,14 +173,15 @@ def foreground_from_GBGmodel(bg_mu,bg_std,I,th =2):
     # fg_map = np.zeros((s[0],s[1]), dtype=bool )
     fg_map = np.zeros(s, dtype=bool)
     # centered Image with repect to mu of the Background
-    Ic = np.abs(I - bg_mu)
-    if len(s) == 2:
-        fg_map[Ic >= th * (bg_std + 2)] = True
+
+    Ic = np.abs(I-bg_mu)
+    if len(s)==2:
+        fg_map[Ic>=th*(bg_std+2)] = True
     else:
         for d in range(s[2]):
-            fg_map[Ic[..., d] >= th * (bg_std[..., d] + 2), d] = True
-        fg_map = np.any(fg_map, axis=2)
-    # np.any(fg_map,axis=2)
+            fg_map[Ic[...,d]>=th*(bg_std[...,d]+2),d] = True
+        fg_map = np.any(fg_map,axis=2)
+    #np.any(fg_map,axis=2)
     return fg_map
 
 
@@ -355,3 +360,23 @@ def compute_metrics_general(gt, bboxes, k=10, iou_thresh=0.5):
     map = ut.mapk(bboxes, gt, k)
 
     return (fscore_val, iou, map, bboxTP, bboxFN, bboxFP)
+
+
+
+def background_subtractor_MOG_facu(video_fname):
+
+    """
+    cap = cv.VideoCapture('vdo.avi')
+    """
+
+    cap = cv.VideoCapture(video_fname)
+    fgbg = cv.bgsegm.createBackgroundSubtractorMOG()
+    while(1):
+        ret, frame = cap.read()
+        yield fgbg.apply(frame)
+    #     cv.imshow('frame',fgmask)
+    #     k = cv.waitKey(30) & 0xff
+    #     if k == 27:
+    #         break
+    # cap.release()
+    # cv.destroyAllWindows()

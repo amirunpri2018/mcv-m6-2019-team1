@@ -628,13 +628,15 @@ def getImg_D(im_path,D=1,color_space=None,color_channels=None):
         Clr_flag = cv.IMREAD_COLOR
 
     I = cv.imread(im_path,Clr_flag)
-
     if color_space:
         I = cv.cvtColor(I,color_space)
 
-    if color_channels:
-        I = I[...,color_channels]
+    if not color_channels==[]:
+        reduceI = I[...,color_channels]
+        I = reduceI
 
-    if D==1:
+    if D==1 and color_space is None:
         I = np.repeat(I[:, :, np.newaxis], D, axis=2)
+
+
     return I
