@@ -187,7 +187,7 @@ def main():
         'LSBP': LSBPBackgroundSubstractor()
     }
 
-    model = 'MOG'
+    model = 'LSBP'
 
     for loc, filename in enumerate(frame_list):
 
