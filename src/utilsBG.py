@@ -1,3 +1,5 @@
+from abc import ABCMeta, abstractmethod
+
 import numpy as np
 import utils as ut
 import matplotlib.patches as mpatches
@@ -184,92 +186,6 @@ def foreground_from_GBGmodel(bg_mu,bg_std,I,th =2):
     #np.any(fg_map,axis=2)
     return fg_map
 
-
-# State of the art background subtraction:
-
-
-def background_subtractor_MOG(cap):
-
-    """
-    cap = cv.VideoCapture('vdo.avi')
-    """
-
-    fgbg = cv.bgsegm.createBackgroundSubtractorMOG()
-    while(1):
-        ret, frame = cap.read()
-        fgmask = fgbg.apply(frame)
-        cv.imshow('frame',fgmask)
-        k = cv.waitKey(30) & 0xff
-        if k == 27:
-            break
-    cap.release()
-    cv.destroyAllWindows()
-
-
-def background_subtractor_MOG2(cap):
-
-    """
-    cap = cv.VideoCapture('vdo.avi')
-    """
-
-    fgbg = cv.createBackgroundSubtractorMOG2()
-    while(1):
-        ret, frame = cap.read()
-        fgmask = fgbg.apply(frame)
-        cv.imshow('frame',fgmask)
-        k = cv.waitKey(30) & 0xff
-        if k == 27:
-            break
-    cap.release()
-    cv.destroyAllWindows()
-
-
-def background_subtractor_GMG(cap):
-
-    """
-    cap = cv.VideoCapture('vdo.avi')
-
-    Warning: first frames will be black
-    """
-
-    kernel = cv.getStructuringElement(cv.MORPH_ELLIPSE,(3,3))
-    fgbg = cv.bgsegm.createBackgroundSubtractorGMG()
-    while(1):
-        ret, frame = cap.read()
-        fgmask = fgbg.apply(frame)
-        fgmask = cv.morphologyEx(fgmask, cv.MORPH_OPEN, kernel)
-        cv.imshow('frame',fgmask)
-        k = cv.waitKey(30) & 0xff
-        if k == 27:
-            break
-    cap.release()
-    cv.destroyAllWindows()
-
-
-def background_subtractor_LSBP(cap):
-
-    """
-    cap = cv.VideoCapture('vdo.avi')
-    """
-
-    fgbg = cv.bgsegm.createBackgroundSubtractorLSBP()
-    while(1):
-        ret, frame = cap.read()
-        fgmask = fgbg.apply(frame)
-        cv.imshow('frame',fgmask)
-        k = cv.waitKey(30) & 0xff
-        if k == 27:
-            break
-    cap.release()
-    cv.destroyAllWindows()
-
-
-    # centered Image with repect to mu of the Background
-    Ic = np.abs(I-bg_mu)
-    foreground_map[Ic>=th*(bg_std+2)] = True
-    return foreground_map
-
-
 def connected_components(mask0, area_min=None, area_max=None, ff_min=None, ff_max=None, fr_min=None,
                          plot=False, fname=None, directory=None):
     label_image = label(mask0)
@@ -362,21 +278,67 @@ def compute_metrics_general(gt, bboxes, k=10, iou_thresh=0.5):
     return (fscore_val, iou, map, bboxTP, bboxFN, bboxFP)
 
 
+# State of the art background subtraction:
 
-def background_subtractor_MOG_facu(video_fname):
-
-    """
-    cap = cv.VideoCapture('vdo.avi')
-    """
-
+def frames_from_video(video_fname):
     cap = cv.VideoCapture(video_fname)
-    fgbg = cv.bgsegm.createBackgroundSubtractorMOG()
-    while(1):
+    while True:
         ret, frame = cap.read()
-        yield fgbg.apply(frame)
-    #     cv.imshow('frame',fgmask)
-    #     k = cv.waitKey(30) & 0xff
-    #     if k == 27:
-    #         break
-    # cap.release()
-    # cv.destroyAllWindows()
+        yield frame
+
+
+# def background_subtractor_MOG(video_fname):
+#     fgbg = cv.bgsegm.createBackgroundSubtractorMOG()
+#     for frame in frames_from_video(video_fname):
+#         yield fgbg.apply(frame)
+#
+#
+# def background_subtractor_MOG2(video_fname):
+#     fgbg = cv.createBackgroundSubtractorMOG2()
+#     for frame in frames_from_video(video_fname):
+#         yield fgbg.apply(frame)
+#
+#
+# def background_subtractor_GMG(video_fname):
+#     kernel = cv.getStructuringElement(cv.MORPH_ELLIPSE, (3, 3))
+#     fgbg = cv.bgsegm.createBackgroundSubtractorGMG()
+#
+#     for frame in frames_from_video(video_fname):
+#         fgmask = fgbg.apply(frame)
+#         yield cv.morphologyEx(fgmask, cv.MORPH_OPEN, kernel)
+#
+# def background_subtractor_LSBP(video_fname):
+#     fgbg = cv.bgsegm.createBackgroundSubtractorMOG()
+#     for frame in frames_from_video(video_fname):
+#         yield fgbg.apply(frame)
+
+
+class BackgroundSubstractor(object):
+    __metaclass__ = ABCMeta
+
+    @abstractmethod
+    def __init__(self):
+        pass
+
+    def apply(self, value):
+        return self.bg_subs.apply(value)
+
+
+class MOGBackgroundSubstractor(BackgroundSubstractor):
+    def __init__(self):
+        self.bg_subs = cv.bgsegm.createBackgroundSubtractorMOG()
+
+
+class GMGBackgroundSubstractor(BackgroundSubstractor):
+    def __init__(self):
+        self.bg_subs = cv.bgsegm.createBackgroundSubtractorGMG()
+        self.kernel = cv.getStructuringElement(cv.MORPH_ELLIPSE, (3, 3))
+
+    def apply(self, value):
+        value = super(GMGBackgroundSubstractor, self).apply(value)
+        return cv.morphologyEx(value, cv.MORPH_OPEN, self.kernel)
+
+
+class LSBPBackgroundSubstractor(BackgroundSubstractor):
+    def __init__(self):
+        self.bg_subs = cv.bgsegm.createBackgroundSubtractorLSBP()

@@ -27,10 +27,17 @@ if __name__ == '__main__':
     video_file = os.path.join(w.ROOT_DIR,
                            'datasets', 'AICity_data', 'train', 'S03',
                            'c010', 'vdo.avi')
-    for frame in bg.background_subtractor_MOG_facu(video_file):
-        print 4
-        print frame
 
+    frames = bg.background_subtractor_MOG_facu(video_file)
+
+    f1 = next(frames)
+
+    for f in bg.background_subtractor_MOG_facu(video_file):
+        if f is not None:
+            print f.sum()
+
+
+    print 4
 
 
 
