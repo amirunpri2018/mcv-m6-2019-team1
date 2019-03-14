@@ -1,6 +1,6 @@
 
 # Folder fnames
-import utils as ut
+import src.utils as ut
 import utils_xml as utx
 import os
 DIR= '../annotation_pascal'

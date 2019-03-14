@@ -23,7 +23,27 @@ WEEK = 'week2'
 
 
 def main():
-    pass
+    """
+    Add documentation.
+
+    :return: Nothing
+    """
+
+    # Set useful directories
+    frames_dir = os.path.join(
+        src.ROOT_DIR,
+        'datasets',
+        'm6_week1_frames',
+        'frames')
+    results_dir = os.path.join(src.OUTPUT_DIR, WEEK, TASK, EXP_NAME)
+    # Ground truth file path
+    gt_file = os.path.join(src.ROOT_DIR,
+                           'datasets', 'AICity_data', 'train', 'S03',
+                           'c010', 'gt', 'gt.txt')
+
+    # Create folders if they don't exist
+    if not os.path.isdir(results_dir):
+        os.mkdir(results_dir)
 
 
 if __name__ == '__main__':

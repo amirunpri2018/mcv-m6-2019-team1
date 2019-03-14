@@ -14,8 +14,8 @@ from skimage.morphology import binary_erosion, disk, opening
 from skimage.restoration import denoise_tv_chambolle
 from skimage.measure import label, regionprops
 
-import utils as ut
-import evaluation.evaluation_funcs as ef
+import src.utils as ut
+import src.evaluation.evaluation_funcs as ef
 from template_matching import calculate_template, template_matching_candidates_2, template_matching_global, get_templates
 from sliding_match import sliding_match
 

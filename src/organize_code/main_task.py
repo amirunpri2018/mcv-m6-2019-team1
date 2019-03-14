@@ -16,7 +16,7 @@ from skimage.morphology import binary_erosion, disk, opening, closing
 # Local libraries
 #import src.utils as ut
 #from src import weeks as w
-import utils as ut
+import src.utils as ut
 import utilsBG as bg
 
 ROOT_DIR = os.path.dirname(

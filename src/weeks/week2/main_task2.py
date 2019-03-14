@@ -11,7 +11,7 @@ import numpy as np
 
 # Local libraries
 import src.utils as ut
-import src.utilsBG as bg
+import src.organize_code.utilsBG as bg
 from src import weeks as w
 
 
