@@ -1,7 +1,7 @@
 
 import weeks.week2 as w2
 import weeks.week3 as w3
-
+from weeks.week3 import main_task3 as w3_2
 
 if __name__ == '__main__':
     # Week 1
@@ -15,5 +15,5 @@ if __name__ == '__main__':
     # Week 3
     # w3.main_task1.main()
     # w3.main_task2.main()
-    # w3.main_task3.main()
+    w3_2.main()
     # w3.main_task4.main()
