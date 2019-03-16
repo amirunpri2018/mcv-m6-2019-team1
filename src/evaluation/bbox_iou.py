@@ -1,3 +1,6 @@
+
+import pandas as pd
+import numpy as np
 def bbox_iou(bboxA, bboxB):
     # compute the intersection over union of two bboxes
 
@@ -27,3 +30,83 @@ def bbox_iou(bboxA, bboxB):
 
     # return the intersection over union value
     return iou
+
+def bbox_list_from_pandas(Pbbox):
+    bbox = list()
+    for bA in Pbbox.itertuples():#enumerate(lbboxA):
+        #print(bA)
+        #bboxA = bA[['ymin', 'xmin', 'ymax', 'xmax']].values.tolist()
+        bbox.append([getattr(bA, 'ymin'),getattr(bA, 'xmin'),getattr(bA, 'ymax'),getattr(bA, 'xmax')])
+
+    return bbox
+
+def bbox_lists_iou(lbboxA,lbboxB):
+    """
+    # This function receive the lists in a pandas format
+    Return
+    - iou: a np matrix size (len(A),len(B)) with all the iou scores
+
+
+    """
+    #print(lbboxA)
+    iou = np.zeros((len(lbboxA),len(lbboxB)))
+    i = 0
+    for bA in lbboxA.itertuples():#enumerate(lbboxA):
+        #print(bA)
+        #bboxA = bA[['ymin', 'xmin', 'ymax', 'xmax']].values.tolist()
+        bboxA = [getattr(bA, 'ymin'),getattr(bA, 'xmin'),getattr(bA, 'ymax'),getattr(bA, 'xmax')]
+
+        j=0
+        for bB in lbboxB.itertuples():#enumerate(llbboxB):
+            #print(bB)
+            bboxB = [getattr(bB, 'ymin'),getattr(bB, 'xmin'),getattr(bB, 'ymax'),getattr(bB, 'xmax')]
+            #bboxB = bB[['ymin', 'xmin', 'ymax', 'xmax']].values.tolist()
+            iou[i][j] = bbox_iou(bboxA, bboxB)
+            j+=1
+
+        i+=1
+
+
+    return iou
+
+
+def match_iou(iou_mat,iou_th=0):
+    """
+    find the best match for the 1st dimension
+    The order is important
+    Returns:
+
+    if 1st DIM > 2nd DIM
+    The object with the lower score will be declared as terminated
+    ---> in the Future - declared as occluded - if after N frames it is still occluded - the track will be over
+
+    """
+    #np.max(iou_mat)
+    match = list()
+    r = 0
+    c = 0
+
+    s = iou_mat.shape
+    for i in range(np.min(s)):
+
+
+        if np.count_nonzero(iou_mat)==0:
+        #if iou_mat.size ==0:
+            break
+
+        ind = np.unravel_index(np.argmax(iou_mat, axis=None), s)
+        iou_score = iou_mat[ind]
+        if iou_score>iou_th:
+
+            match.append([ind[0],ind[1],iou_score])
+        # remove i and j from iou_mat
+
+        iou_mat[ind[0]][:] = 0
+        iou_mat[:][ind[1]] = 0
+
+
+        #iou_mat = np.delete(iou_mat,(ind[0]),axis=0)
+        #iou_mat = np.delete(iou_mat,(ind[1]),axis=1)
+        #s = iou_mat.shape
+
+    return match

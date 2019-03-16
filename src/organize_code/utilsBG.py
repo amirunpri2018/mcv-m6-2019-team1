@@ -2,7 +2,7 @@ from abc import ABCMeta, abstractmethod
 
 import numpy as np
 import src.utils as ut
-import matplotlib.patches as mpatches
+
 # Read frames from video
 
 import cv2 as cv
@@ -14,6 +14,7 @@ import matplotlib
 matplotlib.use('TkAgg')
 
 import matplotlib.animation as manimation
+import matplotlib.patches as mpatches
 # For visulization
 import matplotlib.pyplot as plt
 from skimage.measure import label, regionprops

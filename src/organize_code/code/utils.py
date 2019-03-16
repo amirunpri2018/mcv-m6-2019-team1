@@ -13,6 +13,17 @@ import bs4
 import numpy as np
 import pandas as pd
 
+# Visualization
+import matplotlib
+
+#from src.map import get_avg_precision_at_iou
+
+matplotlib.use('TkAgg')
+
+
+import matplotlib.patches as patches
+# For visulization
+import matplotlib.pyplot as plt
 from skimage import exposure
 #import src.evaluation.evaluation_funcs as evalf
 # Local modules
@@ -576,3 +587,40 @@ def get_files_from_dir2(cdir,ext = None):
             file_list.append(os.path.join(cdir,file_name))
 
     return file_list
+
+def plot_bboxes(img, bboxes,l=[],ax=None , title=''):
+    #if ax is None:
+
+    if plt.gca() is None:
+        fig, ax = plt.subplots(figsize=(10, 6))
+    else:
+        ax = plt.gca()
+    #ax = plt.gca
+    ax.cla()
+    ax.imshow(img,cmap='gray')
+    #print(l_bboxes)
+    colors = 'bgrcmykw'
+
+    # label as numbers
+    i=0
+
+    if l==[]:
+        l = range(len(l_bboxes))
+
+
+
+    for bbox in bboxes:
+        cl_idx = int(l[i]) % 8
+        color = colors[cl_idx]
+        #color = colors[np.random.choice(len(colors))]
+        #print(bbox)
+        #print('<<<<<<<<<<<')
+        #print([bbox[0], bbox[1], bbox[2] - bbox[0], bbox[3] - bbox[1]])
+        rect = patches.Rectangle((bbox[1], bbox[0]), bbox[3] - bbox[1], bbox[2] - bbox[0], linewidth=1, edgecolor=color, facecolor='none') #,alpha=0.1,label=str(l[i]))
+        # Add the patch to the Axes
+        ax.add_patch(rect)
+        ax.set
+        plt.text(bbox[1],bbox[0],str(int(l[i])))
+        i+=1
+    ax.set_title(title)
+    plt.pause(0.01)

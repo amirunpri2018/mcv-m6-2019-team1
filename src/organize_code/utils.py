@@ -649,16 +649,24 @@ def getImg_D(im_path,D=1,color_space=None,color_channels=[]):
 
     return I
 
-def plot_bboxes(img, l_bboxes, title=''):
-    fig, ax = plt.subplots(figsize=(10, 6))
+def plot_bboxes(img, l_bboxes,l=[],ax=None , title=''):
+    if ax is None:
+        fig, ax = plt.subplots(figsize=(10, 6))
     ax.imshow(img)
 
     colors = 'bgrcmykw'
 
+    # label as numbers
+    i=0
+    if l==[]:
+        l = range(len(l_bboxes))
+
     for bboxes in l_bboxes:
         color = colors[np.random.choice(len(colors))]
         for bbox in bboxes:
-            rect = patches.Rectangle((bbox[0], bbox[1]), bbox[2] - bbox[0], bbox[3] - bbox[1], linewidth=1, edgecolor=color, facecolor='none')
+            rect = patches.Rectangle((bbox[0], bbox[1]), bbox[2] - bbox[0], bbox[3] - bbox[1], linewidth=1, edgecolor=color, facecolor=color,alpha=0.1,label=str(l[i]))
             # Add the patch to the Axes
             ax.add_patch(rect)
             ax.set
+            plt.text(bbox[0],bbox[1],str(l[i]))
+            i+=1
