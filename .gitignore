@@ -110,6 +110,8 @@ datasets/m6_week1_frames/
 devnull/
 annotation_pascal/from_frame_176
 code/tests.ipynb
+frames/
+src/weeks/week3/kalman/video_kalman
 
 # Multimedia
 *.avi
