@@ -32,10 +32,12 @@ def bbox_iou(bboxA, bboxB):
     return iou
 
 def bbox_list_from_pandas(Pbbox):
+    """
+    Convert Pandas List to a simple List of BBOX
+    """
     bbox = list()
     for bA in Pbbox.itertuples():#enumerate(lbboxA):
-        #print(bA)
-        #bboxA = bA[['ymin', 'xmin', 'ymax', 'xmax']].values.tolist()
+
         bbox.append([getattr(bA, 'ymin'),getattr(bA, 'xmin'),getattr(bA, 'ymax'),getattr(bA, 'xmax')])
 
     return bbox
@@ -83,9 +85,7 @@ def match_iou(iou_mat,iou_th=0):
     """
     #np.max(iou_mat)
     match = list()
-    r = 0
-    c = 0
-
+    iou_score = list()
     s = iou_mat.shape
     for i in range(np.min(s)):
 
@@ -95,18 +95,59 @@ def match_iou(iou_mat,iou_th=0):
             break
 
         ind = np.unravel_index(np.argmax(iou_mat, axis=None), s)
-        iou_score = iou_mat[ind]
-        if iou_score>iou_th:
+        iou_score.append(iou_mat[ind])
+        if iou_score[i]>iou_th:
 
             match.append([ind[0],ind[1],iou_score])
         # remove i and j from iou_mat
 
-        iou_mat[ind[0]][:] = 0
-        iou_mat[:][ind[1]] = 0
+        for r in range(s[0]):
+            iou_mat[(r,ind[1])] = 0
+        for c in range(s[1]):
+            iou_mat[(ind[0],c)] = 0
 
 
-        #iou_mat = np.delete(iou_mat,(ind[0]),axis=0)
-        #iou_mat = np.delete(iou_mat,(ind[1]),axis=1)
-        #s = iou_mat.shape
+    return match,iou_score
+def calcCenterBbox(bbox):
+    """
+    bboxB = ['ymin', 'xmin','ymax','xmax']
+    Returns y-center, x- center
+    """
+    return [bbox[0]+(bbox[2]-bbox[0])/2.0, bbox[1]+(bbox[3]-bbox[1])/2.0]
 
-    return match
+def calcAreaBbox(bbox):
+    return float((bbox[2]-bbox[0])* (bbox[3]-bbox[1]))
+
+def calcRatioBbox(bbox):
+    return float(bbox[2]-bbox[0])/ float(bbox[3]-bbox[1])
+
+def getMotionBbox(bAp,bBp):
+    """
+    Calc Motion simple features from sequantial bbox
+    B with respect to A
+    Returns:
+    Dy,Dx,Zoom,Rot
+    """
+
+    bA = bbox_list_from_pandas(bAp)
+    bB = bbox_list_from_pandas(bBp)
+
+    bAc = calcCenterBbox(bA[0])
+    bBc = calcCenterBbox(bB[0])
+
+    D = list(np.array(bBc) - np.array(bAc))
+
+    #D = bBc-bAc
+    bAa = calcAreaBbox(bA[0])
+    bBa = calcAreaBbox(bB[0])
+    Ar = bBa/bAa
+
+    bAr = calcRatioBbox(bA[0])
+    bBr = calcRatioBbox(bB[0])
+    Rr = bBr/bAr
+
+    bBp['Dy'] = D[0]
+    bBp['Dx'] = D[1]
+    bBp['zoom'] = Ar
+    bBp['rot'] = Rr
+    return [D[0],D[1],Ar,Rr]
