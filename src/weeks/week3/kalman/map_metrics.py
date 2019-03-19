@@ -45,6 +45,7 @@ def calc_iou_individual(pred_box, gt_box):
     Raises:
         AssertionError: if the box is obviously malformed
     """
+    #print(pred_box)
     x1_t, y1_t, x2_t, y2_t = gt_box
     x1_p, y1_p, x2_p, y2_p = pred_box
 
@@ -170,7 +171,7 @@ def get_model_scores_map(pred_boxes):
 
     model_scores_map = {}
     for img_id, val in pred_boxes.items():
-        for score in [val['scores']]:
+        for score in val['scores']:
             if score not in model_scores_map.keys():
                 model_scores_map[score] = [img_id]
             else:
@@ -221,23 +222,34 @@ def get_avg_precision_at_iou(gt_boxes, pred_boxes, iou_thr=0.5):
         # On first iteration, define img_results for the first time:
         img_ids = gt_boxes.keys() if ithr == 0 else model_scores_map[model_score_thr]
         for img_id in img_ids:
-            gt_boxes_img = gt_boxes[img_id]
-            box_scores = pred_boxes_pruned[img_id]['scores']
-            start_idx = 0
-            for score in box_scores:
-                if score <= model_score_thr:
-                    pred_boxes_pruned[img_id]
-                    start_idx += 1
-                else:
-                    break
 
-            # Remove boxes, scores of lower than threshold scores:
-            pred_boxes_pruned[img_id]['scores'] = pred_boxes_pruned[img_id]['scores'][start_idx:]
-            pred_boxes_pruned[img_id]['boxes'] = pred_boxes_pruned[img_id]['boxes'][start_idx:]
+            b = gt_boxes.get(img_id, None)
+            # Add exception if detection has no bboxes:
+            if b is not None:
 
-            # Recalculate image results for this image
-            img_results[img_id] = get_single_image_results(
-                gt_boxes_img, pred_boxes_pruned[img_id]['boxes'], iou_thr)
+                #img_id = (img_id)
+                print(img_id)
+                gt_boxes_img = gt_boxes[img_id]['boxes']
+
+            a = pred_boxes_pruned.get(img_id, None)
+            # Add exception if detection has no bboxes:
+            if a is not None:
+                box_scores = pred_boxes_pruned[img_id]['scores']
+                start_idx = 0
+                for score in box_scores:
+                    if score <= model_score_thr:
+                        pred_boxes_pruned[img_id]
+                        start_idx += 1
+                    else:
+                        break
+
+                # Remove boxes, scores of lower than threshold scores:
+                pred_boxes_pruned[img_id]['scores'] = pred_boxes_pruned[img_id]['scores'][start_idx:]
+                pred_boxes_pruned[img_id]['boxes'] = pred_boxes_pruned[img_id]['boxes'][start_idx:]
+
+                # Recalculate image results for this image
+                img_results[img_id] = get_single_image_results(
+                    gt_boxes_img, pred_boxes_pruned[img_id]['boxes'], iou_thr)
 
         prec, rec = calc_precision_recall(img_results)
         precisions.append(prec)

@@ -326,6 +326,49 @@ def get_bboxes_from_aicity(fnames):
     # Return DataFrame
     return pd.DataFrame(bboxes)
 
+
+def get_bboxes_from_aicity_file(fname, save_in=None):
+    """
+    Get bounding boxes from AICity XML-like file.
+
+    :param fname: XML filename
+    :param save_in: Filepath to save the DataFrame as a pickle file
+    :return: Pandas DataFrame with the data
+    """
+
+    # Read file
+    soup = read_xml(fname)
+
+    # Create the main DataFrame
+    df = pd.DataFrame()
+
+    # Iterate over track tags
+    for track_tag in soup.find_all('track'):
+        # Get track tag attributes
+        track_attrs = track_tag.attrs
+        # List to store the corresponding bounding boxes
+        bboxes = list()
+        for bbox in track_tag.find_all('box'):
+            bbox.attrs = dict((k, float(v)) for k, v in bbox.attrs.iteritems())
+            bboxes.append(bbox.attrs)
+
+        # Convert the results to a DataFrame and add track tag attributes
+        df_track = pd.DataFrame(bboxes)
+        for k, v in track_attrs.iteritems():
+            df_track[k] = v
+
+        # Append data to the main DataFrame
+        df = df.append(df_track)
+
+    # Save DataFrame if necessary
+    if save_in is not None:
+        df.to_pickle(save_in)
+
+    # Return DataFrame
+    return df
+
+
+
 def get_bboxes_from_MOTChallenge(fname):
     """
     Get the Bboxes from the txt files
