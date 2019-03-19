@@ -668,5 +668,6 @@ def plot_bboxes(img, l_bboxes,l=[],ax=None , title=''):
             # Add the patch to the Axes
             ax.add_patch(rect)
             ax.set
-            plt.text(bbox[0],bbox[1],str(l[i]))
+            plt.text(bbox[0],bbox[1],str(l[i]),{'color': color})
+            
             i+=1

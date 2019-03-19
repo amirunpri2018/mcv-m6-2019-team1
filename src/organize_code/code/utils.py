@@ -606,21 +606,30 @@ def plot_bboxes(img, bboxes,l=[],ax=None , title=''):
 
     if l==[]:
         l = range(len(l_bboxes))
+        Ntext = 1
 
+    if len(np.shape(l))==1:
+        l=[l]
 
-
+    Ntext = len(l)
     for bbox in bboxes:
-        cl_idx = int(l[i]) % 8
+        cl_idx = int(l[0][i]) % 8
         color = colors[cl_idx]
-        #color = colors[np.random.choice(len(colors))]
-        #print(bbox)
-        #print('<<<<<<<<<<<')
-        #print([bbox[0], bbox[1], bbox[2] - bbox[0], bbox[3] - bbox[1]])
-        rect = patches.Rectangle((bbox[1], bbox[0]), bbox[3] - bbox[1], bbox[2] - bbox[0], linewidth=1, edgecolor=color, facecolor='none') #,alpha=0.1,label=str(l[i]))
+        rect = patches.Rectangle((bbox[1], bbox[0]), bbox[3] - bbox[1], bbox[2] - bbox[0], linewidth=1, edgecolor=color, facecolor=color,alpha=0.2,hatch=r"//") #hatch=r"//",alpha=0.1,label=str(l[i]))
+        rect2 = patches.Rectangle((bbox[1], bbox[0]), bbox[3] - bbox[1], bbox[2] - bbox[0], linewidth=1, edgecolor=color,fill=False)
         # Add the patch to the Axes
         ax.add_patch(rect)
         ax.set
-        plt.text(bbox[1],bbox[0],str(int(l[i])))
+        ax.add_patch(rect2)
+        ax.set
+
+        plt.text(bbox[1],bbox[0],str(int(l[0][i])),{'color': 'w','fontweight':'bold'},bbox={'facecolor':color,'edgecolor':color, 'alpha':0.7,'pad':0})
+        for t in range(1,Ntext):
+
+
+            plt.text(bbox[1],bbox[2]+20,'{:0.2f}'.format(l[t][i]))
+
+
         i+=1
     ax.set_title(title)
-    plt.pause(0.01)
+    plt.pause(0.001)

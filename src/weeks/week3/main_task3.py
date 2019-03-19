@@ -8,8 +8,11 @@ import cv2 as cv
 import matplotlib
 matplotlib.use('TkAgg')
 
-
-
+# For Metric
+#from sklearn.metrics import average_precision_score
+# y_true = np.array([0, 0, 1, 1])
+# y_scores = np.array([0.1, 0.4, 0.35, 0.8])
+# average_precision_score(y_true, y_scores)
 # For visulization
 
 import matplotlib.pyplot as plt
@@ -32,9 +35,11 @@ GT = 'no'
 DIM = 3
 EXP_NAME = '{}GT_N{}_DIM{}'.format(GT, N, DIM)
 TASK = 'task3'
-WEEK = 'week2'
-
-
+WEEK = 'week3'
+DET_GAP = 5
+PLOT_FLAG = True
+VID_FLAG = False
+SAVE_FLAG = True
 def main():
     """
     Add documentation.
@@ -64,9 +69,15 @@ def main():
     df = ut.get_bboxes_from_MOTChallenge(gt_file)
     df.sort_values(by=['frame'])
     df.loc[:,'track_id'] = -1
-    #df['track_id'] = -1
-    #print(df)
-    #print('========@@@@@@@@@@@@@@@@@@')
+    # New columns for tracking
+
+    df.loc[:,'track_iou'] = -1.0
+    # Motion
+    df.loc[:,'Dx'] = -300.0
+    df.loc[:,'Dy'] = -300.0
+    df.loc[:,'rot'] = -1.0
+    df.loc[:,'zoom'] = -1.0
+
     # Group bbox by frame
     df_grouped = df.groupby('frame')
 
@@ -82,13 +93,15 @@ def main():
     headers = list(df.head(0))
     print(headers )
     df_track = pd.DataFrame(columns=headers)
-    #df_track.assign(track_id=[])
+
 
     #Initialize Track ID - unique ascending numbers
     Track_id = 8
 
 
     for f, df_group in df_grouped:
+        if f>3000:
+            break
 
         im_path = os.path.join(frames_dir,'frame_'+str(f).zfill(3)+'.jpg')
 
@@ -101,38 +114,40 @@ def main():
             for t in range(len(df_group)):
                 df_group.at[t, 'track_id'] = Track_id
                 Track_id+=1
-            #df_group = df_group.assign(track_id=range(Track_id,Track_id+len(df_group)))
+
             df_p_group = pd.DataFrame(columns=headers)
             df_p_group = df_p_group.append(df_group, ignore_index=True)
 
-            #df_p_group = df_group
-            #df_p_group = df_p_group.assign(track_id=range(Track_id,Track_id+len(df_group)))
             Track_id +=len(df_group)
-            # for t,df_object in enumerate(df_group):
-            #     # Give Track_id to each object in the first frame
-            #     df_object['track_id'] = Track_id
-            #     Track_id +=1
-            #     df_p_group = df_track.append(df_object, ignore_index=True)
+
             df_track = df_track.append(df_p_group, ignore_index=True)
-            #print(df_p_group)
-            #print('<<<<<<<<<<<<<<<<<')
-                #df_gt_p = df_object[['ymin', 'xmin', 'ymax', 'xmax']].values.tolist()
+
 
 
             #plot 1st frame
-            plt.ion()
-            plt.show()
-            fig = plt.figure()
-            ax = fig.add_subplot(111)
+            if PLOT_FLAG:
 
-            bbox =  bb.bbox_list_from_pandas(df_p_group)
+                plt.ion()
+                plt.show()
+                fig = plt.figure()
+                ax = fig.add_subplot(111)
 
+                bbox =  bb.bbox_list_from_pandas(df_p_group)
 
+                ut.plot_bboxes(cv.imread(im_path,cv.CV_LOAD_IMAGE_GRAYSCALE),bbox,l=df_p_group['track_id'].tolist(),ax=ax,title = str(f))
 
-            ut.plot_bboxes(cv.imread(im_path,cv.CV_LOAD_IMAGE_GRAYSCALE),bbox,l=df_p_group['track_id'].tolist(),ax=ax,title = str(f))
-            #ut.plot_bboxes(ax ,img,bbox,l= labels, title=str(frame_p))
+                if SAVE_FLAG:
+                    img = np.fromstring(fig.canvas.tostring_rgb(), dtype=np.uint8, sep='')
+                    img  = img.reshape(fig.canvas.get_width_height()[::-1] + (3,))
+                    img = cv.cvtColor(img,cv.COLOR_RGB2BGR)
 
-                    #df = df.append({'A': i}, ignore_index=True)
+                #cv.imshow(img)
+                    if VID_FLAG:
+                        fourcc = cv.cv.CV_FOURCC('M','J','P','G')
+
+                        s = np.shape(img)
+                        out = cv.VideoWriter(os.path.join(results_dir,"IOU.avi"),fourcc, 30.0, (s[0],s[1]))
+                        out.write(img)
             continue
 
 
@@ -140,45 +155,80 @@ def main():
 
         frame_p = df_group['frame'].values[0]
 
-        iou_mat = bb.bbox_lists_iou(df_p_group,df_group)
-        pp = np.shape(iou_mat)
-        if pp[0]>1 and pp[1]>1:
-            print(iou_mat)
-            print(matchlist)
-            print(offset)
+        # if there is more than N frames between detection - it is a new track - even if it in the bbox overlaps
 
-        matchlist = bb.match_iou(iou_mat,iou_th=0)
+        if df_p_group['frame'].values[0]+DET_GAP >df_group['frame'].values[0]:
 
-        # sort it according to the new frame
-        offset = np.min(df_group.index.values.tolist() )
+            iou_mat = bb.bbox_lists_iou(df_p_group,df_group)
+            matchlist,iou_score = bb.match_iou(iou_mat,iou_th=0)
 
-        for t in matchlist:
+            # sort it according to the new frame
+            offset = np.min(df_group.index.values.tolist() )
 
-            df_group.at[offset+t[1], 'track_id'] = df_p_group.get_value(t[0],'track_id')
+            for t,iou_s in zip(matchlist,iou_score):
+                df_group.at[offset+t[1], 'track_id'] = df_p_group.get_value(t[0],'track_id')
+                df_group.at[offset+t[1], 'track_iou'] = iou_s
+                # Motion parameters
+                #------------------
+                # Dx ,Dv - of bbox center
+                # Zoom - Ratio of areas
+                # Rot - Ratio of Ratio(h/w)'' -describes rotation
+
+                box_motion = bb.getMotionBbox(df_p_group.ix[[t[0]]],df_group.ix[[offset+t[1]]])
+
+                df_group.loc[[offset+t[1]],'rot'] = box_motion[3]#.columns = ['Dy', 'Dx','zoom','rot']
+                df_group.loc[[offset+t[1]],'zoom'] = box_motion[2]
+                df_group.loc[[offset+t[1]],'Dx'] = box_motion[1]
+                df_group.loc[[offset+t[1]],'Dy'] = box_motion[0]
+                #print(df_group)
 
 
-            # Setting the confidence as the iou score
-            # TODO
+                # Setting the confidence as the iou score
+                # TODO
+        else:
+            print('All Tracks were initialized becaue there was no detection fot {} frames'.format(DET_GAP))
 
-            #if df_p_group.get_value(t[0],'frame') ==np.nan:
-                #print(df_p_group)
-
+            #print(df_group)
         # Assign new tracks
         for t in df_group.index[df_group['track_id'] == -1].tolist():
 
             df_group.at[t, 'track_id'] = Track_id
             Track_id+=1
 
-        df_track = df_track.append(df_group, ignore_index=True)
 
+        #print(df_group)
         df_p_group = pd.DataFrame(columns=headers)
         df_p_group = df_p_group.append(df_group, ignore_index=True)
         df_p_group = df_p_group.dropna()
-        bbox =  bb.bbox_list_from_pandas(df_p_group)
-        #print(df_p_group['track_id'].tolist())
-        ut.plot_bboxes(cv.imread(im_path,cv.CV_LOAD_IMAGE_GRAYSCALE),bbox,l=df_p_group['track_id'].tolist(),ax=ax,title = str(f))
+        #print(df_p_group)
+        df_track = df_track.append(df_p_group, ignore_index=True)
+        #print(df_track)
+        if PLOT_FLAG:
+            bbox =  bb.bbox_list_from_pandas(df_p_group)
+            #print(df_p_group['track_id'].tolist())
+            ut.plot_bboxes(cv.imread(im_path,cv.CV_LOAD_IMAGE_GRAYSCALE),bbox,l=[df_p_group['track_id'].tolist(),df_p_group['track_iou'].tolist()],ax=ax,title = "frame: "+str(f))
+
+            if SAVE_FLAG:
+                img = np.fromstring(fig.canvas.tostring_rgb(), dtype=np.uint8, sep='')
+                img  = img.reshape(fig.canvas.get_width_height()[::-1] + (3,))
+                img = cv.cvtColor(img,cv.COLOR_RGB2BGR)
+                #print(np.shape(img))
+                cv.imwrite(os.path.join(results_dir,"{}.png".format(f)), img);
+                #cv.imshow('test',img)
+                if VID_FLAG:
+
+                    out.write(img)
         #bbox_iou(bboxA, bboxB)
 
+    #    END OF PROCESS
+    if VID_FLAG:
+        out.release()
+
+    print(df_track)
+    print(np.shape(df_track))
+
+    if SAVE_FLAG:
+        df_track.to_pickle(os.path.join(results_dir,"iou_tracks.pkl"))
 
     # Read BBox from 1st Frame
     #Bbox_picked = ut.non_max_suppression(bboxes, overlap_thresh)
