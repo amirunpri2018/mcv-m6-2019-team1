@@ -37,7 +37,7 @@ EXP_NAME = '{}GT_N{}_DIM{}'.format(GT, N, DIM)
 TASK = 'task3'
 WEEK = 'week3'
 DET_GAP = 5
-PLOT_FLAG = False
+PLOT_FLAG = True
 VID_FLAG = False
 SAVE_FLAG = True
 def main():
