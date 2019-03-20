@@ -31,11 +31,10 @@ import metrics.video as m
 OUTPUT_DIR ='../output'
 ROOT_DIR = '../'
 # Some constant for the script
-N = 0.01
-GT = 'no'
-DIM = 3
-EXP_NAME = '{}GT_N{}_DIM{}'.format(GT, N, DIM)
-TASK = 'task3'
+N = 1
+DET = 'GT'
+EXP_NAME = '{}_N{}'.format(DET, N)
+TASK = 'task2'
 WEEK = 'week3'
 DET_GAP = 5
 PLOT_FLAG = True
@@ -66,19 +65,44 @@ def main():
                            'data', 'AICity_data', 'train', 'S03',
                            'c010', 'gt', 'gt.txt')
 
-    print(gt_file + ' was loaded')
-    # Get BBox detection from list
-    df_gt = ut.get_bboxes_from_MOTChallenge(gt_file)
+    #gt_file = os.path.join(ROOT_DIR,'data', 'm6-full_annotation.xml')
+    gt_file = os.path.join(ROOT_DIR,'data', 'm6-full_annotation.pkl')
 
-    # Result file path
-    det_file = os.path.join(results_dir,
-                           'iou_tracks.pkl')
+    # detection file can be txt/xml/pkl
+    det_file = os.path.join(results_dir,'kalman_out.pkl')
 
-    df_det = pd.read_pickle(det_file)
-    print(det_file + ' was loaded')
+    # if the result matrix - which assigned each track and bbox to TP,FP,FN
+    # no need to load all the data
+    res_file = os.path.join( results_dir,'result_mat.pkl')
+    if os.path.isfile(res_file):
+        result_list = pd.read_pickle(res_file)
+    else:
+        # Get BBox detection from list
+        df_gt = ut.getBBox_from_gt(gt_file)
+        df_det = ut.getBBox_from_gt(det_file)
 
-    print(np.shape(df_det))
+        result_list = m.PandaTpFp(df_det,df_gt ,iou_thresh = 0.5,save_in =res_file)
 
 
+    # Computing mAP for detections
+    mAP=m.PandaTo_PR(result_list)
+    print('mAP detection :{}'.format(mAP))
+    mAP_track,Ap_perTrack=m.PandaTrack_PR(result_list)
+    print('mAP tracking :{}'.format(mAP_track))
+    Ap_perTrack = np.asarray(Ap_perTrack)
+    n_bins = 10
+    bins_h = np.linspace(np.min(Ap_perTrack), np.max(Ap_perTrack), num=n_bins)
+    #val_hist, bin_centers = ut.histogram(np.asarray(Ap_perTrack), bins=len(Ap_perTrack)/10)
+    fig = plt.figure(1)
+    ax1 = plt.subplot(111)
+    ax1.hist(Ap_perTrack.ravel(), bins=bins_h,alpha=0.65) #,width=0.8
+    ax1.set(xticks=bins_h)
+    ax1.locator_params(axis='x', nbins=5)
 
-    m.PandaTpFp(df_det,df_gt ,iou_thresh = 0.5)
+    ax1.axvline(mAP_track, color='r', linestyle='dashed', linewidth=2)
+    _, max_ = plt.ylim()
+    ax1.text(mAP_track + mAP_track/20, max_ - max_/20,'Mean: {:.2f}'.format(mAP_track))
+
+    ax1.set_title('mAP over tracking')
+    plt.show()
+    plt.savefig(os.path.join(results_dir,'mAP_track.png'))

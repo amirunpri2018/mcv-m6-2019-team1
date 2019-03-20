@@ -1,11 +1,15 @@
+from __future__ import division
 
 import pandas as pd
 import numpy as np
+
 def bbox_iou(bboxA, bboxB):
     # compute the intersection over union of two bboxes
 
     #ToDo: ESTO ES UN PARCHE HORRIBLE PERO IOU DABA NAN!
-
+    #print('a', bboxA)
+    #print('b',bboxB)
+    #break
     if bboxA == bboxB:
         iou = 1
 
@@ -51,6 +55,7 @@ def bbox_lists_iou(lbboxA,lbboxB):
 
     """
     #print(lbboxA)
+
     iou = np.zeros((len(lbboxA),len(lbboxB)))
     i = 0
     for bA in lbboxA.itertuples():#enumerate(lbboxA):
@@ -63,11 +68,12 @@ def bbox_lists_iou(lbboxA,lbboxB):
             #print(bB)
             bboxB = [getattr(bB, 'ymin'),getattr(bB, 'xmin'),getattr(bB, 'ymax'),getattr(bB, 'xmax')]
             #bboxB = bB[['ymin', 'xmin', 'ymax', 'xmax']].values.tolist()
+
             iou[i][j] = bbox_iou(bboxA, bboxB)
+            #iou[i][j] = bbox_iou(bboxA, bboxB)
             j+=1
 
         i+=1
-
 
     return iou
 
@@ -84,6 +90,7 @@ def match_iou(iou_mat,iou_th=0):
 
     """
     #np.max(iou_mat)
+    iou_mat_c = iou_mat.copy()
     match = list()
     iou_score = list()
     s = iou_mat.shape
@@ -94,17 +101,17 @@ def match_iou(iou_mat,iou_th=0):
         #if iou_mat.size ==0:
             break
 
-        ind = np.unravel_index(np.argmax(iou_mat, axis=None), s)
-        iou_score.append(iou_mat[ind])
+        ind = np.unravel_index(np.argmax(iou_mat_c, axis=None), s)
+        iou_score.append(iou_mat_c[ind])
         if iou_score[i]>iou_th:
 
-            match.append([ind[0],ind[1],iou_score])
+            match.append([ind[0],ind[1]])
         # remove i and j from iou_mat
 
         for r in range(s[0]):
-            iou_mat[(r,ind[1])] = 0
+            iou_mat_c[(r,ind[1])] = 0
         for c in range(s[1]):
-            iou_mat[(ind[0],c)] = 0
+            iou_mat_c[(ind[0],c)] = 0
 
 
     return match,iou_score

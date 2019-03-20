@@ -11,12 +11,13 @@ import random
 
 def PandaTo_PR(PandaList):
     # get annotation - is the conf
-    PandaList = PandaList.sort(['conf'], ascending=[0])
+    print('Computing mAP for detection....')
+    PandaList = PandaList.sort_values(['conf'], ascending=[0])
     conf = PandaList['conf'].tolist()
-    print(conf)
+    #print(conf)
 
     met = PandaList['metric'].tolist()
-    print(len(set(conf)))
+    #print(len(set(conf)))
     Ngt = met.count('TP')+met.count('FN')
     print('# bbox in the GT: {}'.format(Ngt))
     mAP = list()
@@ -51,6 +52,7 @@ def PandaTo_PR(PandaList):
 
         # Sort according to recall
         map = pr2map(pre,recal)
+        print(map)
         # mean over the precision
         mAP.append(map)
     print(mAP)
@@ -68,7 +70,7 @@ def pr2map(pre,recal):
 
 def PandaTrack_PR(PandaList):
     # get annotation - is the conf
-    PandaList = PandaList.sort(['conf'], ascending=[0])
+    PandaList = PandaList.sort_values(['conf'], ascending=[0])
     g_tk = PandaList.groupby('GT_track_id')
     mAP = list()
     id_full = PandaList['track_id'].tolist()
@@ -130,13 +132,14 @@ def PandaTrack_PR(PandaList):
             #print('recall:')
             #print(recal)
             map = pr2map(pre,recal)
+            print(map)
             # mean over the precision
             APi.append(map)
         mAP.append(np.mean(APi))
     #print(mAP)
     return np.mean(mAP),mAP
 
-def PandaTpFp(Pred,GT ,iou_thresh = 0.5):
+def PandaTpFp(Pred,GT ,iou_thresh = 0.5,save_in = None):
     # Loop on frames in PandaList
     # Assign Tp/Fp To the Panda PandaList
 
@@ -156,16 +159,20 @@ def PandaTpFp(Pred,GT ,iou_thresh = 0.5):
     PGTs = GT.groupby('frame')
 
     for f,Pframe in PPreds:
+        Pframe = Pframe.dropna()
+        Pframe = Pframe.reset_index(drop=True)
         idx = np.min(Pframe.index.values.tolist() )
         # Finding matching GT frame
         #df.loc[pd.IndexSlice[age,:], 'Raitings'].idxmin()[1]
         #print(GT)
         #if f>400:
         #    break
-        Current_GT=PGTs.get_group(f)
+        Current_GT= PGTs.get_group(f)
         Current_GT = Current_GT.dropna()
+        Current_GT = Current_GT.reset_index(drop=True)
+
         idx_gt = np.min(Current_GT.index.values.tolist() )
-        Pframe = Pframe.dropna()
+
         if Current_GT.empty:
             # assign False to all BBox in Predictions
             New_List = New_List.append(Pframe, ignore_index=True)
@@ -196,14 +203,8 @@ def PandaTpFp(Pred,GT ,iou_thresh = 0.5):
                 New_List = New_List.append(Current_GTm.get_group(0), ignore_index=True)
 
     New_List = New_List.dropna()
-    #print(New_List)
-    mAP,Ap_perTrack=PandaTrack_PR(New_List)
-    print('mAP tracking for gt.txt:{}'.format(mAP))
-    #PandaTo_PR(New_List)
-    return New_List
+    if save_in is not None:
+        New_List.to_pickle(save_in)
 
-def mAP():
-    map = evf.performance_accumulation_window(detections, annotations, iou_thresh=0.5)
-# y_true = np.array([0, 0, 1, 1])
-# y_scores = np.array([0.1, 0.4, 0.35, 0.8])
-# average_precision_score(y_true, y_scores)
+
+    return New_List

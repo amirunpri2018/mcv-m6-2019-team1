@@ -15,7 +15,7 @@ import pandas as pd
 
 #import imageio
 from skimage import exposure
-import src.evaluation.evaluation_funcs as evalf
+#import src.evaluation.evaluation_funcs as evalf
 
 
 
@@ -94,6 +94,47 @@ def get_bboxes_from_aicity(fnames):
     # Return DataFrame
     return pd.DataFrame(bboxes)
 
+def get_bboxes_from_aicity_file(fname, save_in=None):
+    """
+    Get bounding boxes from AICity XML-like file.
+
+    :param fname: XML filename
+    :param save_in: Filepath to save the DataFrame as a pickle file
+    :return: Pandas DataFrame with the data
+    """
+
+    # Read file
+    soup = read_xml(fname)
+
+    # Create the main DataFrame
+    df = pd.DataFrame()
+
+    # Iterate over track tags
+    for track_tag in soup.find_all('track'):
+        # Get track tag attributes
+        track_attrs = track_tag.attrs
+        # List to store the corresponding bounding boxes
+        bboxes = list()
+        for bbox in track_tag.find_all('box'):
+            bbox.attrs = dict((k, float(v)) for k, v in bbox.attrs.iteritems())
+            bboxes.append(bbox.attrs)
+
+        # Convert the results to a DataFrame and add track tag attributes
+        df_track = pd.DataFrame(bboxes)
+        for k, v in track_attrs.iteritems():
+            df_track[k] = v
+
+        # Append data to the main DataFrame
+        df = df.append(df_track)
+    df = df.dropna()
+    df = df.reset_index(drop=True)
+
+    # Save DataFrame if necessary
+    if save_in is not None:
+        df.to_pickle(save_in)
+
+    # Return DataFrame
+    return df
 def add_tag(parent, tag_name, tag_value=None, tag_attrs=None):
     """
     Add tag to a BeautifulSoup element.

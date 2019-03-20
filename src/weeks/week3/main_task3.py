@@ -30,16 +30,15 @@ import evaluation.bbox_iou as bb
 OUTPUT_DIR ='../output'
 ROOT_DIR = '../'
 # Some constant for the script
-N = 0.01
-GT = 'no'
-DIM = 3
-EXP_NAME = '{}GT_N{}_DIM{}'.format(GT, N, DIM)
+N = 1
+DET = 'GT'
+EXP_NAME = '{}_N{}'.format(DET, N)
 TASK = 'task3'
 WEEK = 'week3'
 DET_GAP = 5
 PLOT_FLAG = True
 VID_FLAG = False
-SAVE_FLAG = True
+SAVE_FLAG = False
 def main():
     """
     Add documentation.
@@ -63,11 +62,25 @@ def main():
                            'data', 'AICity_data', 'train', 'S03',
                            'c010', 'gt', 'gt.txt')
 
-    print(gt_file)
 
+    gt_file = os.path.join(ROOT_DIR,'data', 'm6-full_annotation.xml')
+    gt_file = os.path.join(ROOT_DIR,'data', 'm6-full_annotation.pkl')
+    #df = ut.getBBox_from_gt(gt_file,save_in = out_file)
+    df = ut.getBBox_from_gt(gt_file)
+    #print(gt_file)
+
+    det_file = os.path.join(ROOT_DIR,
+                           'data', 'AICity_data', 'train', 'S03',
+                           'c010', 'det', 'det_yolo3.txt')
     # Get BBox detection from list
-    df = ut.get_bboxes_from_MOTChallenge(gt_file)
+    det_file = gt_file
+    df = ut.getBBox_from_gt(det_file)
+    print(df.dtypes)
+    #df = ut.get_bboxes_from_MOTChallenge(gt_file)
+    # Get BBox from xml gt_file
+    #df = get_bboxes_from_aicity_file(fname, save_in=None)
     df.sort_values(by=['frame'])
+
     df.loc[:,'track_id'] = -1
     # New columns for tracking
 
@@ -100,10 +113,12 @@ def main():
 
 
     for f, df_group in df_grouped:
+        df_group = df_group.reset_index(drop=True)
+
         if f>3000:
             break
 
-        im_path = os.path.join(frames_dir,'frame_'+str(f).zfill(3)+'.jpg')
+        im_path = os.path.join(frames_dir,'frame_'+str(int(f)).zfill(3)+'.jpg')
 
         # 1st frame -
         if frame_p ==0:
@@ -112,12 +127,14 @@ def main():
             print('First detected object at frame {}'.format(frame_p))
                     # Assign new tracks
             for t in range(len(df_group)):
+
+                #print(df_group.loc['track_id'])
                 df_group.at[t, 'track_id'] = Track_id
                 Track_id+=1
 
             df_p_group = pd.DataFrame(columns=headers)
             df_p_group = df_p_group.append(df_group, ignore_index=True)
-
+            df_p_group = df_p_group.dropna()
             Track_id +=len(df_group)
 
             df_track = df_track.append(df_p_group, ignore_index=True)
@@ -133,7 +150,6 @@ def main():
                 ax = fig.add_subplot(111)
 
                 bbox =  bb.bbox_list_from_pandas(df_p_group)
-
                 ut.plot_bboxes(cv.imread(im_path,cv.CV_LOAD_IMAGE_GRAYSCALE),bbox,l=df_p_group['track_id'].tolist(),ax=ax,title = str(f))
 
                 if SAVE_FLAG:
@@ -160,10 +176,14 @@ def main():
         if df_p_group['frame'].values[0]+DET_GAP >df_group['frame'].values[0]:
 
             iou_mat = bb.bbox_lists_iou(df_p_group,df_group)
+            #print('first',iou_mat)
             matchlist,iou_score = bb.match_iou(iou_mat,iou_th=0)
-
+            #print('second',iou_mat)
+            #print(iou_score)
             # sort it according to the new frame
+
             offset = np.min(df_group.index.values.tolist() )
+            print(offset)
 
             for t,iou_s in zip(matchlist,iou_score):
                 df_group.at[offset+t[1], 'track_id'] = df_p_group.get_value(t[0],'track_id')

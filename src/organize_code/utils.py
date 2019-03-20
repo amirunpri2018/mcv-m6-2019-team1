@@ -16,6 +16,7 @@ import pandas as pd
 import cv2 as cv
 #import imageio
 from skimage import exposure
+
 import src.evaluation.evaluation_funcs as evalf
 # Local modules
 
@@ -569,6 +570,12 @@ def get_files_from_dir2(cdir,ext = None):
     file_list.sort(key=natural_keys)
     return file_list
 
+def getBBox_from_gt(fname):
+    if fname.endswith('.txt'):
+        df = get_bboxes_from_MOTChallenge(fname)
+    elif fname.endswith('.xml'):
+        df = get_bboxes_from_MOTChallenge(fname)
+
 def get_bboxes_from_MOTChallenge(fname):
     """
     Get the Bboxes from the txt files
@@ -669,5 +676,5 @@ def plot_bboxes(img, l_bboxes,l=[],ax=None , title=''):
             ax.add_patch(rect)
             ax.set
             plt.text(bbox[0],bbox[1],str(l[i]),{'color': color})
-            
+
             i+=1

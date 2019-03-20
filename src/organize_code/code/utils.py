@@ -17,6 +17,7 @@ import pandas as pd
 import matplotlib
 
 #from src.map import get_avg_precision_at_iou
+import organize_code.utils_xml as utx
 
 matplotlib.use('TkAgg')
 
@@ -356,7 +357,33 @@ def get_bboxes_from_MOTChallenge(fname):
 
     return pd.DataFrame(BBox_list)
 
+def getBBox_from_gt(fname,save_in = None):
+    if fname.endswith('.txt'):
+        df = get_bboxes_from_MOTChallenge(fname)
+    elif fname.endswith('.xml'):
+        df = utx.get_bboxes_from_aicity_file(fname)
+        df = df.rename(columns={"id": "track_id", "xbr": "xmax", "ybr": "ymax", "xtl": "xmin", "ytl": "ymin"}) #index=int,
+        df[['track_id']] = df[['track_id']].astype(int)
+        df[['frame']] = df[['frame']].astype(int)
+        df.sort_values(by=['frame'])
+        df = df.reset_index(drop=True)
+    elif fname.endswith('.pkl'):
+        df = pd.read_pickle(fname)
+        #print(list(df.head(0)))
 
+        if any(x == 'boxes' for x in list(df.head(0))) and not any(x == 'xmin' for x in list(df.head(0))):
+            print('coverting pandas format..')
+            df = convert_pkalman(df)
+    print(fname + ' was loaded')
+
+    if save_in is not None:
+        df.to_pickle(save_in)
+        #print(df.dtypes)
+        #df[['frame', 'track_id']] = df[['frame', 'track_id']].astype(int)
+        #df = df.astype({"frame": int})
+        #print(df.dtypes)
+
+    return df
 
 def get_bboxes_from_pascal(fnames, track_id):
     """
@@ -576,6 +603,25 @@ def compute_metrics(gt, img_shape, noise_size=True, noise_size_factor=5, noise_p
 
     return (bboxes, fscore_val, iou, map)
 
+def convert_pkalman(df):
+    #['img_id', 'boxes', 'track_id', 'scores']
+    #-->['conf', 'frame', 'occlusion', 'track_id', 'xmax', 'xmin', 'ymax', 'ymin', 'track_iou', 'Dx', 'Dy', 'rot', 'zoom']
+
+    df = df.rename(columns={"img_id": "frame"})
+    df.loc[:,'conf']=0.0
+    df.loc[:,'xmin']=0.0
+    df.loc[:,'ymin']=0.0
+    df.loc[:,'xmax']=0.0
+    df.loc[:,'ymax']=0.0
+    for i, row in df.iterrows():
+        bbox =row['boxes']
+        df.loc[i,'xmin'] = bbox[0]
+        df.loc[i,'ymin'] = bbox[1]
+        df.loc[i,'xmax'] = bbox[2]
+        df.loc[i,'ymax'] = bbox[3]
+
+    return df
+
 
 def get_files_from_dir2(cdir,ext = None):
     ListOfFiles = os.listdir(cdir)
@@ -613,6 +659,10 @@ def plot_bboxes(img, bboxes,l=[],ax=None , title=''):
 
     Ntext = len(l)
     for bbox in bboxes:
+
+        #bbox = int(bbox)
+        bbox = np.asarray(bbox,dtype= np.int)
+
         cl_idx = int(l[0][i]) % 8
         color = colors[cl_idx]
         rect = patches.Rectangle((bbox[1], bbox[0]), bbox[3] - bbox[1], bbox[2] - bbox[0], linewidth=1, edgecolor=color, facecolor=color,alpha=0.2,hatch=r"//") #hatch=r"//",alpha=0.1,label=str(l[i]))
@@ -633,3 +683,30 @@ def plot_bboxes(img, bboxes,l=[],ax=None , title=''):
         i+=1
     ax.set_title(title)
     plt.pause(0.001)
+
+def track_cleanup(df,MIN_TRACK_LENGTH=5):
+    """
+    This Function "clean up" detection according to a set of parameters
+    df: panda list with the following columns names
+    Mandatory:
+    ----------
+    ['frame','track_id', 'xmax', 'xmin', 'ymax', 'ymin']
+    Optional:
+    --------
+    ['track_iou', 'Dx', 'Dy', 'rot', 'zoom']
+    Not Relevant:
+    ['conf']
+
+    OUTPUT:
+    df (Pandas list) without some of the detections
+    """
+
+    if MIN_TRACK_LENGTH is not None:
+        tk_df = df.groupby('track_id')
+        tk_size = tk_df.size()
+        tk_df.filter(lambda x: x.sizee() > MIN_TRACK_LENGTH)
+
+        df_out = pd.concat(tk_df,axis=1)
+        df_out = df_out.reset_index()
+
+    return df_out
