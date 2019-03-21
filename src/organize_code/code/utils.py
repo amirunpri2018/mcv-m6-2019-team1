@@ -4,10 +4,9 @@ import os
 
 # Built-in modules
 import logging
-import os
 import urllib
 import itertools
-
+import cv2 as cv
 # 3rd party modules
 import bs4
 import numpy as np
@@ -18,6 +17,7 @@ import matplotlib
 
 #from src.map import get_avg_precision_at_iou
 import organize_code.utils_xml as utx
+import evaluation.bbox_iou as bb
 
 matplotlib.use('TkAgg')
 
@@ -341,7 +341,7 @@ def get_bboxes_from_aicity(fnames):
 def get_bboxes_from_MOTChallenge(fname):
     """
     Get the Bboxes from the txt files
-    MOTChallengr format [frame,ID,left,top,width,height,1,-1,-1,-1]
+    MOTChallengr format [frame,ID,left,top,width,height,conf,-1,-1,-1]
      {'ymax': 84.0, 'frame': 90, 'track_id': 2, 'xmax': 672.0, 'xmin': 578.0, 'ymin': 43.0, 'occlusion': 1}
     fname: is the path to the txt file
     :returns: Pandas DataFrame with the data
@@ -608,7 +608,7 @@ def convert_pkalman(df):
     #-->['conf', 'frame', 'occlusion', 'track_id', 'xmax', 'xmin', 'ymax', 'ymin', 'track_iou', 'Dx', 'Dy', 'rot', 'zoom']
 
     df = df.rename(columns={"img_id": "frame"})
-    df.loc[:,'conf']=0.0
+    df.loc[:,'conf']=1.0
     df.loc[:,'xmin']=0.0
     df.loc[:,'ymin']=0.0
     df.loc[:,'xmax']=0.0
@@ -684,7 +684,14 @@ def plot_bboxes(img, bboxes,l=[],ax=None , title=''):
     ax.set_title(title)
     plt.pause(0.001)
 
-def track_cleanup(df,MIN_TRACK_LENGTH=5):
+def mean_velocity(tk,MOTION_MERGE):
+    dx = tk['Dx'].iloc[-MOTION_MERGE:].mean()
+    dy = tk['Dy'].iloc[-MOTION_MERGE:].mean()
+    zoom = tk['zoom'].iloc[-MOTION_MERGE:].mean()
+    rot = tk['rot'].iloc[-MOTION_MERGE:].mean()
+    return [dx,dy,zoom,rot]
+
+def track_cleanup(df,MIN_TRACK_LENGTH=5,STATIC_OBJECT = None,MOTION_MERGE = None):
     """
     This Function "clean up" detection according to a set of parameters
     df: panda list with the following columns names
@@ -696,17 +703,307 @@ def track_cleanup(df,MIN_TRACK_LENGTH=5):
     ['track_iou', 'Dx', 'Dy', 'rot', 'zoom']
     Not Relevant:
     ['conf']
+    PARAMETERS:
+    ==========
 
+    1. MIN_TRACK_LENGTH =5
+        remove tracks that are shorter than 5 frames
+
+    2. STATIC_OBJECT - recomended 0.95
+        remove tracks that has overlap of min 95% through all frames  -
+        each bbox is compared to 1st bbox
+
+    3. RATIO_VAR
+        remove tracks with high variation of ratio (h/w)
+        normalized by the length of the track
+    4. MOTION_MERGE
+        merge tracks that correspond with % of the expectence according to Dx,Dy,Zoom
     OUTPUT:
     df (Pandas list) without some of the detections
     """
+    IMAGE_SIZE = (1080,1920)
+
+    headers = list(df.head(0))
+    #print(headers )
+    #print('---------')
+    if MOTION_MERGE is not None:
+        print('merging tracks...')
+        # connect tracks that has a continues motion
+
+        if 'Mx' not in headers:
+            # if the info is not exist -calculate it
+            df_n = pd.DataFrame(columns=headers)
+            tk_df = df.groupby('track_id')
+            for id,tk in tk_df:
+                tk = get_trackMotion(tk)
+                df_n =df_n.append(tk,ignore_index=True)
+
+
+            df = df_n
+
+        # Calc expected trajectory (acc) based on N detections
+        # add N synthetic bboxes to each track
+        df.sort_values(by=['frame'])
+        tk_df = df.groupby('track_id')
+        syn = pd.DataFrame(columns=headers)
+        for id,tk in tk_df:
+            # acc - in Dx,Dy,Zoom,Rot in that order
+            val = mean_velocity(tk,MOTION_MERGE)
+
+            # get last frame
+            nb = pd.DataFrame(columns=headers)
+            #last_idx = tk.idxmax()
+            #nb.loc[0]=tk.loc[tk['frame'].idxmax()]
+            #print(tk.iloc[-1])
+            nb.loc[0,'Mx'] = tk.iloc[-1]['Mx']
+            nb.loc[0,'My'] = tk.iloc[-1]['My']
+            nb.loc[0,'area'] = tk.iloc[-1]['area']
+            nb.loc[0,'zoom'] = tk.iloc[-1]['zoom']
+            nb.loc[0,'ratio'] = tk.iloc[-1]['ratio']
+            nb.loc[0,'frame'] = tk.iloc[-1]['frame']
+            nb.loc[0,'track_id']= tk.iloc[-1]['track_id']
+            #nb = nb.reset_index()
+            #last = tk.loc[tk['frame'].idxmax()]
+            #last = last.reset_index()
+            # add synthetic bbox
+            for i in range(1,MOTION_MERGE):
+
+
+                nb.loc[i,'Mx'] = nb.iloc[i-1]['Mx']+ val[0]
+                nb.loc[i,'My'] = nb.iloc[i-1]['My']+ val[1]
+                nb.loc[i,'area'] = nb.iloc[i-1]['area']* val[2]
+                nb.loc[i,'ratio'] = nb.iloc[i-1]['ratio']*val[3]
+                nb.loc[i,'frame'] = nb.iloc[i-1]['frame']+ 1
+                nb.loc[i,'track_id']= nb.iloc[i-1]['track_id']
+                # append the new DataFrame
+            syn = syn.append(nb, ignore_index=True)
+        syn = syn.reset_index()
+        # check correspondence for each frame
+
+        sy_fs = syn.groupby(['frame','track_id'])
+
+
+        VAR = 0.70
+        # Create a List with only 1st frame of each track
+        df.sort_values('frame')
+        df_tk = df.groupby('track_id')
+        df1f = pd.DataFrame(list(df.head(0)))
+        for t,d in df_tk:
+            d = d.reset_index()
+            df1f = df1f.append(d.loc[0])
+        df_fs = df1f.groupby('frame')
+        # Loop on synthetic bbox
+        for f, sf in sy_fs:
+            #print(f)
+            mx_min = sf['Mx']-10
+            mx_max = sf['Mx']+10
+            my_min = sf['My']-10
+            my_max = sf['My']+10
+            size_min = sf['area']*VAR
+            size_max = sf['area']*(2-VAR)
+            ratio_min = sf['ratio']*VAR
+            ratio_max = sf['ratio']*(2-VAR)
+
+
+            if f[0] not in df_fs.groups.keys():
+                continue
+
+            c_df = df_fs.get_group(f[0])
+            c_df = c_df.reset_index(drop=True)
+            for i in range(len(c_df)):
+                if f[1]==c_df.loc[i,'track_id']:
+                    continue
+                print(int(c_df.loc[i,'track_id']))
+                if np.any(c_df.loc[i,'Mx'] >mx_min):
+                    if np.any(c_df.loc[i,'Mx'] <mx_max):
+                        if np.any(c_df.loc[i,'My'] >my_min):
+                            if np.any(c_df.loc[i,'My'] <my_max):
+                                if np.any(c_df.loc[i,'area'] >size_min):
+                                    if np.any(c_df.loc[i,'area'] <size_max):
+                                        if np.any(c_df.loc[i,'ratio'] >ratio_min):
+                                            if np.any(c_df.loc[i,'ratio'] <ratio_max):
+                                                print('Track {} and {} Track have been merge into {}'.format(f[1],int(c_df.loc[i,'track_id']),f[1]))
+                                                df.loc[df['track_id'] == c_df.loc[i,'track_id'],'track_id'] = f[1]
+                                                break
+
+            # For each frame compare if the synthetic is similar to another track - if it is replace the entire track id
+            # If all conditions met the first frame of the track - it is a match
+
+
+
+
 
     if MIN_TRACK_LENGTH is not None:
-        tk_df = df.groupby('track_id')
-        tk_size = tk_df.size()
-        tk_df.filter(lambda x: x.sizee() > MIN_TRACK_LENGTH)
 
-        df_out = pd.concat(tk_df,axis=1)
-        df_out = df_out.reset_index()
+        print(np.shape(df)[0])
+        mask = df.groupby('track_id').frame.transform('count') > MIN_TRACK_LENGTH
+        df =df[mask]
+        print('all Tracks shorter than {} frames -were remove'.format(MIN_TRACK_LENGTH))
+        print(np.shape(df)[0])
+
+
+
+    if STATIC_OBJECT is not None:
+        tk_df = df.groupby('track_id')
+        for id,tk in tk_df:
+            iou_mat = bb.bbox_lists_iou(tk,tk)
+            if np.all(iou>STATIC_OBJECT,'all'):
+
+                tk_df.filter(lambda x: x['track_id'] == id)
+
+        df = pd.concat(tk_df,axis=0)
+        #df_out = df_out.reset_index()
+
+    df_out = df.reset_index(drop=True)
 
     return df_out
+
+def get_trackMotion(dft,plot_flag = False):
+    # Input df of 1 track
+    dft.sort_values(by=['frame'])
+    dft = dft.reset_index(drop=True)
+    skip_first = True
+    for i in dft.index.values.tolist():
+        if skip_first:
+            box_motion = bb.getMotionBbox(dft.ix[[i]],dft.ix[[i]])
+            dft.loc[[i],'Mx'] = box_motion[4]
+            dft.loc[[i],'My'] = box_motion[5]
+            dft.loc[[i],'area'] = box_motion[6]
+            dft.loc[[i],'ratio'] = box_motion[7]
+            skip_first = False
+            continue
+
+        box_motion = bb.getMotionBbox(dft.ix[[i-1]],dft.ix[[i]])
+
+        dft.loc[[i],'rot'] = box_motion[3]#.columns = ['Dy', 'Dx','zoom','rot','Mx','My']
+        dft.loc[[i],'zoom'] = box_motion[2]
+        dft.loc[[i],'Dx'] = box_motion[1]
+        dft.loc[[i],'Dy'] = box_motion[0]
+        dft.loc[[i],'Mx'] = box_motion[4]
+        dft.loc[[i],'My'] = box_motion[5]
+        dft.loc[[i],'area'] = box_motion[6]
+        dft.loc[[i],'ratio'] = box_motion[7]
+
+    df_out = dft
+    if plot_flag:
+        frames = dft['frame'].tolist()
+        area = dft.loc[:,'area'].tolist()
+        ratio = dft.loc[:,'ratio'].tolist()
+        mx = dft.loc[:,'Mx'].tolist()
+        my = dft.loc[:,'My'].tolist()
+        fig = plt.figure()
+        ax1= fig.add_subplot(211)
+        ax2= fig.add_subplot(212)
+        ax3 = ax2.twinx()
+        ax4 = ax1.twinx()
+        ax1.plot(frames,mx,':g')
+        ax4.plot(frames,my,':b')
+        ax2.plot(frames,area,':k')
+        ax3.plot(frames,ratio,':m')
+        ax2.set_ylabel('Area', color='k')
+        ax3.set_ylabel('Ratio', color='m')
+        ax1.set_ylabel('X', color='g')
+        ax4.set_ylabel('Y', color='b')
+        ax1.tick_params(axis='y', labelcolor='g')
+        ax2.tick_params(axis='y', labelcolor='k')
+        ax3.tick_params(axis='y', labelcolor='m')
+        ax4.tick_params(axis='y', labelcolor='b')
+        ax1.set_title('motion track #{}'.format(dft.loc[0,'track_id']))
+        plt.show()
+
+    return df_out
+def bboxAnimation(movie_path,det_file,save_in = None,VID_FLAG = False,score_key ='conf'):
+    """
+    Input:
+    movie_path
+        If movie path is a movie - load and extract frame - # TODO:
+        If movie path is a folder - load images
+    det_file : xml,txt or pkl
+        panda list with the following column names
+            ['frame','track_id', 'xmax', 'xmin', 'ymax', 'ymin']
+    save_in
+        folder to save output frames / movie -# TODO:
+
+    """
+    if os.path.isdir(movie_path):
+        DIR_FLAG =True
+    else:
+        DIR_FLAG = False
+
+
+    # Create folders if they don't exist
+    if save_in is not None and not os.path.isdir(save_in):
+        os.mkdir(save_in)
+
+    # Get BBox detection from list
+    df = getBBox_from_gt(det_file)
+
+    df.sort_values(by=['frame'])
+
+    # Group bbox by frame
+    df_grouped = df.groupby('frame')
+
+    headers = list(df.head(0))
+    print(headers )
+    df_track = pd.DataFrame(columns=headers)
+
+    first_frame = True
+    #save_in_bkp = save_in
+    #save_in = None
+    for f, df_group in df_grouped:
+        df_group = df_group.reset_index(drop=True)
+
+        #if f>=300:
+        #    save_in = save_in_bkp
+
+        if DIR_FLAG:
+            im_path = os.path.join(movie_path,'frame_'+str(int(f)).zfill(3)+'.jpg')
+            if not os.path.isfile(im_path):
+                break
+
+
+        # 1st frame -
+        if first_frame:
+
+            plt.ion()
+            plt.show()
+            fig = plt.figure()
+            ax = fig.add_subplot(111)
+
+            bbox =  bb.bbox_list_from_pandas(df_group)
+            plot_bboxes(cv.imread(im_path,cv.CV_LOAD_IMAGE_GRAYSCALE),bbox,l=df_group['track_id'].tolist(),ax=ax,title = str(f))
+
+            if save_in is not None:
+                img = np.fromstring(fig.canvas.tostring_rgb(), dtype=np.uint8, sep='')
+                img  = img.reshape(fig.canvas.get_width_height()[::-1] + (3,))
+                img = cv.cvtColor(img,cv.COLOR_RGB2BGR)
+
+            #cv.imshow(img)
+                if VID_FLAG:
+                    fourcc = cv.cv.CV_FOURCC('M','J','P','G')
+
+                    s = np.shape(img)
+                    out = cv.VideoWriter(os.path.join(save_in,"IOU.avi"),fourcc, 30.0, (s[0],s[1]))
+                    out.write(img)
+            first_frame = False
+            continue
+
+        bbox =  bb.bbox_list_from_pandas(df_group)
+        headers = list(df.head(0))
+        plot_bboxes(cv.imread(im_path,cv.CV_LOAD_IMAGE_GRAYSCALE),bbox,l=[df_group['track_id'].tolist(),df_group[score_key].tolist()],ax=ax,title = "frame: "+str(f))
+
+        if save_in is not None:
+            img = np.fromstring(fig.canvas.tostring_rgb(), dtype=np.uint8, sep='')
+            img  = img.reshape(fig.canvas.get_width_height()[::-1] + (3,))
+            img = cv.cvtColor(img,cv.COLOR_RGB2BGR)
+            cv.imwrite(os.path.join(save_in,"{}.png".format(f)), img);
+
+            if VID_FLAG:
+
+                out.write(img)
+
+
+    #    END OF PROCESS
+    if VID_FLAG:
+        out.release()
+    return

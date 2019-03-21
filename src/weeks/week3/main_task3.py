@@ -30,15 +30,15 @@ import evaluation.bbox_iou as bb
 OUTPUT_DIR ='../output'
 ROOT_DIR = '../'
 # Some constant for the script
-N = 1
-DET = 'GT'
+N = 4
+DET = 'YOLO'
 EXP_NAME = '{}_N{}'.format(DET, N)
 TASK = 'task3'
 WEEK = 'week3'
 DET_GAP = 5
-PLOT_FLAG = True
+PLOT_FLAG = False
 VID_FLAG = False
-SAVE_FLAG = False
+SAVE_FLAG = True
 def main():
     """
     Add documentation.
@@ -64,7 +64,8 @@ def main():
 
 
     gt_file = os.path.join(ROOT_DIR,'data', 'm6-full_annotation.xml')
-    gt_file = os.path.join(ROOT_DIR,'data', 'm6-full_annotation.pkl')
+    gt_file = os.path.join(ROOT_DIR,'data', 'm6-full_annotation2.pkl')
+
     #df = ut.getBBox_from_gt(gt_file,save_in = out_file)
     df = ut.getBBox_from_gt(gt_file)
     #print(gt_file)
@@ -73,9 +74,9 @@ def main():
                            'data', 'AICity_data', 'train', 'S03',
                            'c010', 'det', 'det_yolo3.txt')
     # Get BBox detection from list
-    det_file = gt_file
+    #det_file = gt_file
     df = ut.getBBox_from_gt(det_file)
-    print(df.dtypes)
+    #print(df.dtypes)
     #df = ut.get_bboxes_from_MOTChallenge(gt_file)
     # Get BBox from xml gt_file
     #df = get_bboxes_from_aicity_file(fname, save_in=None)
@@ -90,6 +91,10 @@ def main():
     df.loc[:,'Dy'] = -300.0
     df.loc[:,'rot'] = -1.0
     df.loc[:,'zoom'] = -1.0
+    df.loc[:,'Mx'] = -1.0
+    df.loc[:,'My'] = -1.0
+    df.loc[:,'area'] = -1.0
+    df.loc[:,'ratio'] = -1.0
 
     # Group bbox by frame
     df_grouped = df.groupby('frame')
@@ -105,6 +110,7 @@ def main():
     #df_track = pd.DataFrame({'frame':[]:'ymin':[], 'xmin':[], 'ymax':[], 'xmax':[]})
     headers = list(df.head(0))
     print(headers )
+    print('---------')
     df_track = pd.DataFrame(columns=headers)
 
 
@@ -114,7 +120,8 @@ def main():
 
     for f, df_group in df_grouped:
         df_group = df_group.reset_index(drop=True)
-
+        if f%50==0:
+            print(f)
         if f>3000:
             break
 
@@ -183,7 +190,7 @@ def main():
             # sort it according to the new frame
 
             offset = np.min(df_group.index.values.tolist() )
-            print(offset)
+            #print(offset)
 
             for t,iou_s in zip(matchlist,iou_score):
                 df_group.at[offset+t[1], 'track_id'] = df_p_group.get_value(t[0],'track_id')
@@ -196,10 +203,14 @@ def main():
 
                 box_motion = bb.getMotionBbox(df_p_group.ix[[t[0]]],df_group.ix[[offset+t[1]]])
 
-                df_group.loc[[offset+t[1]],'rot'] = box_motion[3]#.columns = ['Dy', 'Dx','zoom','rot']
+                df_group.loc[[offset+t[1]],'rot'] = box_motion[3]#.columns = ['Dy', 'Dx','zoom','rot','Mx','My']
                 df_group.loc[[offset+t[1]],'zoom'] = box_motion[2]
                 df_group.loc[[offset+t[1]],'Dx'] = box_motion[1]
                 df_group.loc[[offset+t[1]],'Dy'] = box_motion[0]
+                df_group.loc[[offset+t[1]],'Mx'] = box_motion[4]
+                df_group.loc[[offset+t[1]],'My'] = box_motion[5]
+                df_group.loc[[offset+t[1]],'area'] = box_motion[6]
+                df_group.loc[[offset+t[1]],'ratio'] = box_motion[7]
                 #print(df_group)
 
 
@@ -244,11 +255,11 @@ def main():
     if VID_FLAG:
         out.release()
 
-    print(df_track)
+    print('Number of Detections:')
     print(np.shape(df_track))
 
     if SAVE_FLAG:
-        df_track.to_pickle(os.path.join(results_dir,"iou_tracks.pkl"))
+        df_track.to_pickle(os.path.join(results_dir,"pred_tracks.pkl"))
 
     # Read BBox from 1st Frame
     #Bbox_picked = ut.non_max_suppression(bboxes, overlap_thresh)

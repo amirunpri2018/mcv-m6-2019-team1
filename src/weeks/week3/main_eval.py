@@ -4,19 +4,14 @@
 import os
 
 # Related 3rd party libraries
-import cv2 as cv
+#import cv2 as cv
 import matplotlib
 matplotlib.use('TkAgg')
 
-# For Metric
-#from sklearn.metrics import average_precision_score
-# y_true = np.array([0, 0, 1, 1])
-# y_scores = np.array([0.1, 0.4, 0.35, 0.8])
-# average_precision_score(y_true, y_scores)
 # For visulization
 
 import matplotlib.pyplot as plt
-import matplotlib.patches as patches
+#import matplotlib.patches as patches
 import numpy as np
 
 # import List libariry
@@ -24,23 +19,33 @@ import pandas as pd
 #from itertools import repeat
 # Local libraries
 import organize_code.code.utils as ut
-#import organize_code.utils as ut
+
+# Visualization
+#import visualization.utils as ut_vis
+
 import evaluation.bbox_iou as bb
-import metrics.video as m
+
+import sys
+if int(sys.version_info[0]) < 3:
+    import metrics.video as m
+    PY_VER = 2
+else:
+    PY_VER = 3
+    import metrics.video_py3 as m
 #import src
 OUTPUT_DIR ='../output'
 ROOT_DIR = '../'
 # Some constant for the script
 N = 1
-DET = 'GT'
+DET = 'TEST'
 EXP_NAME = '{}_N{}'.format(DET, N)
-TASK = 'task2'
+TASK = 'task3'
 WEEK = 'week3'
 DET_GAP = 5
-PLOT_FLAG = True
-VID_FLAG = True
+PLOT_FLAG = False
+VID_FLAG = False
 SAVE_FLAG = True
-
+REFINE = True
 
 def main():
     """
@@ -66,29 +71,43 @@ def main():
                            'c010', 'gt', 'gt.txt')
 
     #gt_file = os.path.join(ROOT_DIR,'data', 'm6-full_annotation.xml')
-    gt_file = os.path.join(ROOT_DIR,'data', 'm6-full_annotation.pkl')
+    gt_file = os.path.join(ROOT_DIR,'data', 'm6-full_annotation2.pkl')
 
     # detection file can be txt/xml/pkl
-    det_file = os.path.join(results_dir,'kalman_out.pkl')
-
+    #det_file = os.path.join(results_dir,'kalman_out.pkl')
+    det_file = os.path.join(results_dir,'pred_tracks.pkl')
     # if the result matrix - which assigned each track and bbox to TP,FP,FN
     # no need to load all the data
     res_file = os.path.join( results_dir,'result_mat.pkl')
+
+    if PLOT_FLAG:
+        ut.bboxAnimation(frames_dir,det_file,save_in = results_dir)
+
+
     if os.path.isfile(res_file):
         result_list = pd.read_pickle(res_file)
     else:
         # Get BBox detection from list
         df_gt = ut.getBBox_from_gt(gt_file)
         df_det = ut.getBBox_from_gt(det_file)
+        if REFINE:
+            #df_det = ut.track_cleanup(df_det,MIN_TRACK_LENGTH=10,MOTION_MERGE=5)
+            df_det = ut.track_cleanup(df_det,MOTION_MERGE=5)
+            df_det.to_pickle(os.path.join(results_dir,'pred_refine2_tracks.pkl'))
+            #df_det = ut.track_cleanup(df_det,MIN_TRACK_LENGTH=7,STATIC_OBJECT = 0.90)
 
         result_list = m.PandaTpFp(df_det,df_gt ,iou_thresh = 0.5,save_in =res_file)
 
 
     # Computing mAP for detections
+    if PY_VER ==3:
+        idf1 = getIDF1(df_det,df_gt)
+
     mAP=m.PandaTo_PR(result_list)
-    print('mAP detection :{}'.format(mAP))
+
     mAP_track,Ap_perTrack=m.PandaTrack_PR(result_list)
     print('mAP tracking :{}'.format(mAP_track))
+    print('mAP detection :{}'.format(mAP))
     Ap_perTrack = np.asarray(Ap_perTrack)
     n_bins = 10
     bins_h = np.linspace(np.min(Ap_perTrack), np.max(Ap_perTrack), num=n_bins)
@@ -104,5 +123,6 @@ def main():
     ax1.text(mAP_track + mAP_track/20, max_ - max_/20,'Mean: {:.2f}'.format(mAP_track))
 
     ax1.set_title('mAP over tracking')
+    fig.savefig(os.path.join(results_dir,'mAP_track.png'))
+    plt.savefig(os.path.join(results_dir,'mAP_track2.png'))
     plt.show()
-    plt.savefig(os.path.join(results_dir,'mAP_track.png'))

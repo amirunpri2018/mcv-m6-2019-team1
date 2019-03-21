@@ -1,8 +1,9 @@
 
-import weeks.week2 as w2
-import weeks.week3 as w3
-from weeks.week3 import main_task3 as w3_2
+#import weeks.week2 as w2
+#import weeks.week3 as w3
+#from weeks.week3 import main_task3 as w3_2
 from weeks.week3 import main_eval as w3_2_eval
+#from weeks.week3 import main_eval0 as w3_2_vis
 if __name__ == '__main__':
     # Week 1
 
@@ -18,3 +19,4 @@ if __name__ == '__main__':
     #w3_2.main()
     # w3.main_task4.main()
     w3_2_eval.main()
+    #w3_2_vis.main()

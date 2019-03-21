@@ -46,6 +46,16 @@ def bbox_list_from_pandas(Pbbox):
 
     return bbox
 
+def bbox_list_MOT_from_pandas(Pbbox):
+    """
+    Convert Pandas List to a simple List of BBOX
+    """
+    bbox = list()
+    for bA in Pbbox.itertuples():#enumerate(lbboxA):
+
+        bbox.append([getattr(bA, 'xmin'),getattr(bA, 'ymin'),getattr(bA, 'xmax')-getattr(bA, 'xmin'),getattr(bA, 'ymax')-getattr(bA, 'ymin')])
+
+    return bbox
 def bbox_lists_iou(lbboxA,lbboxB):
     """
     # This function receive the lists in a pandas format
@@ -157,4 +167,4 @@ def getMotionBbox(bAp,bBp):
     bBp['Dx'] = D[1]
     bBp['zoom'] = Ar
     bBp['rot'] = Rr
-    return [D[0],D[1],Ar,Rr]
+    return [D[0],D[1],Ar,Rr,bBc[0],bBc[1],bBa,bBr]
