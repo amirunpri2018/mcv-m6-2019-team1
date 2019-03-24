@@ -45,7 +45,7 @@ def PandaTo_PR(PandaList):
     print('# bbox in the GT: {}'.format(Ngt))
     mAP = list()
     # If all conf value is 1
-    if len(set(conf)):
+    if len(set(conf))==1:
         print('All confedance are 1 the mean average preision is based on 10 random ranks')
 
         Niter = 10
@@ -209,8 +209,8 @@ def PandaTpFp(Pred,GT ,iou_thresh = 0.5,save_in = None):
     Pred.loc[:,'matched'] = 0
     GT.loc[:,'matched'] = 0
 
-    #if 'conf' not in list(Pred.head(0)):
-    Pred.loc[:,'conf'] = 1.0
+    if 'conf' not in list(Pred.head(0)):
+        Pred.loc[:,'conf'] = 1.0
 
 
     if 'conf' not in list(GT.head(0)):
@@ -351,8 +351,8 @@ def prepare_list(Pred,GT):
     Pred.loc[:,'matched'] = 0
     GT.loc[:,'matched'] = 0
 
-    #if 'conf' not in list(Pred.head(0)):
-    Pred.loc[:,'conf'] = 1.0
+    if 'conf' not in list(Pred.head(0)):
+        Pred.loc[:,'conf'] = 1.0
 
     if 'conf' not in list(GT.head(0)):
         GT.loc[:,'conf'] = 1.0
@@ -361,4 +361,4 @@ def prepare_list(Pred,GT):
     headers_relevant = ['frame','conf','track_id',	'matched',	'metric','xmax','xmin',	'ymax',	'ymin','GT_track_id']
     GT =GT[headers_relevant]
     Pred =Pred[headers_relevant]
-    return Perd,GT
+    return Pred,GT

@@ -26,7 +26,10 @@ def convert_pkalman(df):
     #-->['conf', 'frame', 'occlusion', 'track_id', 'xmax', 'xmin', 'ymax', 'ymin', 'track_iou', 'Dx', 'Dy', 'rot', 'zoom']
 
     df = df.rename(columns={"img_id": "frame"})
-    df.loc[:,'conf']=1.0
+    if 'scores' in df.head(0):
+         df = df.rename(columns={"scores": "conf"})
+     else:
+         df.loc[:,'conf']=1.0
     df.loc[:,'xmin']=0.0
     df.loc[:,'ymin']=0.0
     df.loc[:,'xmax']=0.0
@@ -121,7 +124,7 @@ def prepare_list(Pred,GT):
     GT.loc[:,'matched'] = 0
 
     #if 'conf' not in list(Pred.head(0)):
-    Pred.loc[:,'conf'] = 1.0
+    #Pred.loc[:,'conf'] = 1.0
 
     if 'conf' not in list(GT.head(0)):
         GT.loc[:,'conf'] = 1.0
@@ -139,9 +142,9 @@ def main():
     ROOT_DIR = '../'
     # Some constant for the script
     N = 1
-    DET = 'YOLO_refine10'
+    DET = 'GT_XML'
     EXP_NAME = '{}_N{}'.format(DET, N)
-    TASK = 'task3'
+    TASK = 'task1'
     WEEK = 'week3'
     results_dir = os.path.join(OUTPUT_DIR, WEEK, TASK, EXP_NAME)
 

@@ -608,7 +608,11 @@ def convert_pkalman(df):
     #-->['conf', 'frame', 'occlusion', 'track_id', 'xmax', 'xmin', 'ymax', 'ymin', 'track_iou', 'Dx', 'Dy', 'rot', 'zoom']
 
     df = df.rename(columns={"img_id": "frame"})
-    df.loc[:,'conf']=1.0
+    if 'scores' in df.head():
+        df = df.rename(columns={'scores':'conf'})
+    else:
+        df.loc[:,'conf']=1.0
+        
     df.loc[:,'xmin']=0.0
     df.loc[:,'ymin']=0.0
     df.loc[:,'xmax']=0.0
@@ -619,6 +623,8 @@ def convert_pkalman(df):
         df.loc[i,'ymin'] = bbox[1]
         df.loc[i,'xmax'] = bbox[2]
         df.loc[i,'ymax'] = bbox[3]
+
+
 
     return df
 
