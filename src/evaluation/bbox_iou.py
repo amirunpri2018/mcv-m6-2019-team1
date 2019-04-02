@@ -152,7 +152,7 @@ def getMotionBbox(bAp,bBp):
     bAc = calcCenterBbox(bA[0])
     bBc = calcCenterBbox(bB[0])
 
-    D = list(np.array(bBc) - np.array(bAc))
+    D = list(np.array(bAc) - np.array(bBc))
 
     #D = bBc-bAc
     bAa = calcAreaBbox(bA[0])

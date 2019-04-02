@@ -612,7 +612,7 @@ def convert_pkalman(df):
         df = df.rename(columns={'scores':'conf'})
     else:
         df.loc[:,'conf']=1.0
-        
+
     df.loc[:,'xmin']=0.0
     df.loc[:,'ymin']=0.0
     df.loc[:,'xmax']=0.0
@@ -657,8 +657,8 @@ def plot_bboxes(img, bboxes,l=[],ax=None , title=''):
     i=0
 
     if l==[]:
-        l = range(len(l_bboxes))
-        Ntext = 1
+        l = range(np.shape(bboxes)[0])
+        #Ntext = 1
 
     if len(np.shape(l))==1:
         l=[l]
@@ -864,6 +864,149 @@ def track_cleanup(df,MIN_TRACK_LENGTH=5,STATIC_OBJECT = None,MOTION_MERGE = None
 
     return df_out
 
+def OF_refine_trk(df,pic_dir,alpha=0.9):
+    """
+    This Function "OF_refine_trk" detection according to a set of parameters
+    df: panda list with the following columns names
+    Mandatory:
+    ----------
+    ['frame','track_id', 'xmax', 'xmin', 'ymax', 'ymin']
+    Optional:
+    --------
+    ['track_iou', 'Dx', 'Dy', 'rot', 'zoom']
+    Not Relevant:
+    ['conf']
+    INPUT:
+    ==========
+
+    1. MIN_TRACK_LENGTH =5
+        remove tracks that are shorter than 5 frames
+
+    2. frame_dir - folder contains the frames
+        - in order to calculate the OF block matches
+
+
+    3. RATIO_VAR
+        remove tracks with high variation of ratio (h/w)
+        normalized by the length of the track
+    4. MOTION_MERGE
+        merge tracks that correspond with % of the expectence according to Dx,Dy,Zoom
+    OUTPUT:
+    df (Pandas list) without some of the detections
+    """
+    IMAGE_SIZE = (1080,1920)
+
+    headers = list(df.head(0))
+    #print(headers )
+    #print('---------')
+    if MOTION_MERGE is not None:
+        print('merging tracks...')
+        # connect tracks that has a continues motion
+
+        if 'Mx' not in headers:
+            # if the info is not exist -calculate it
+            df_n = pd.DataFrame(columns=headers)
+            tk_df = df.groupby('track_id')
+            for id,tk in tk_df:
+                tk = get_trackMotion(tk)
+                df_n =df_n.append(tk,ignore_index=True)
+
+
+            df = df_n
+
+        # Calc expected trajectory (acc) based on N detections
+        # add N synthetic bboxes to each track
+        df.sort_values(by=['frame'])
+        tk_df = df.groupby('track_id')
+        syn = pd.DataFrame(columns=headers)
+        for id,tk in tk_df:
+            # acc - in Dx,Dy,Zoom,Rot in that order
+            val = mean_velocity(tk,MOTION_MERGE)
+
+            # get last frame
+            nb = pd.DataFrame(columns=headers)
+            #last_idx = tk.idxmax()
+            #nb.loc[0]=tk.loc[tk['frame'].idxmax()]
+            #print(tk.iloc[-1])
+            nb.loc[0,'Mx'] = tk.iloc[-1]['Mx']
+            nb.loc[0,'My'] = tk.iloc[-1]['My']
+            nb.loc[0,'area'] = tk.iloc[-1]['area']
+            nb.loc[0,'zoom'] = tk.iloc[-1]['zoom']
+            nb.loc[0,'ratio'] = tk.iloc[-1]['ratio']
+            nb.loc[0,'frame'] = tk.iloc[-1]['frame']
+            nb.loc[0,'track_id']= tk.iloc[-1]['track_id']
+            #nb = nb.reset_index()
+            #last = tk.loc[tk['frame'].idxmax()]
+            #last = last.reset_index()
+            # add synthetic bbox
+            for i in range(1,MOTION_MERGE):
+
+
+                nb.loc[i,'Mx'] = nb.iloc[i-1]['Mx']+ val[0]
+                nb.loc[i,'My'] = nb.iloc[i-1]['My']+ val[1]
+                nb.loc[i,'area'] = nb.iloc[i-1]['area']* val[2]
+                nb.loc[i,'ratio'] = nb.iloc[i-1]['ratio']*val[3]
+                nb.loc[i,'frame'] = nb.iloc[i-1]['frame']+ 1
+                nb.loc[i,'track_id']= nb.iloc[i-1]['track_id']
+                # append the new DataFrame
+            syn = syn.append(nb, ignore_index=True)
+        syn = syn.reset_index()
+        # check correspondence for each frame
+
+        sy_fs = syn.groupby(['frame','track_id'])
+
+
+        VAR = 0.70
+        # Create a List with only 1st frame of each track
+        df.sort_values('frame')
+        df_tk = df.groupby('track_id')
+        df1f = pd.DataFrame(list(df.head(0)))
+        for t,d in df_tk:
+            d = d.reset_index()
+            df1f = df1f.append(d.loc[0])
+        df_fs = df1f.groupby('frame')
+        # Loop on synthetic bbox
+        for f, sf in sy_fs:
+            #print(f)
+            mx_min = sf['Mx']-10
+            mx_max = sf['Mx']+10
+            my_min = sf['My']-10
+            my_max = sf['My']+10
+            size_min = sf['area']*VAR
+            size_max = sf['area']*(2-VAR)
+            ratio_min = sf['ratio']*VAR
+            ratio_max = sf['ratio']*(2-VAR)
+
+
+            if f[0] not in df_fs.groups.keys():
+                continue
+
+            c_df = df_fs.get_group(f[0])
+            c_df = c_df.reset_index(drop=True)
+            for i in range(len(c_df)):
+                if f[1]==c_df.loc[i,'track_id']:
+                    continue
+                print(int(c_df.loc[i,'track_id']))
+                if np.any(c_df.loc[i,'Mx'] >mx_min):
+                    if np.any(c_df.loc[i,'Mx'] <mx_max):
+                        if np.any(c_df.loc[i,'My'] >my_min):
+                            if np.any(c_df.loc[i,'My'] <my_max):
+                                if np.any(c_df.loc[i,'area'] >size_min):
+                                    if np.any(c_df.loc[i,'area'] <size_max):
+                                        if np.any(c_df.loc[i,'ratio'] >ratio_min):
+                                            if np.any(c_df.loc[i,'ratio'] <ratio_max):
+                                                print('Track {} and {} Track have been merge into {}'.format(f[1],int(c_df.loc[i,'track_id']),f[1]))
+                                                df.loc[df['track_id'] == c_df.loc[i,'track_id'],'track_id'] = f[1]
+                                                break
+
+            # For each frame compare if the synthetic is similar to another track - if it is replace the entire track id
+            # If all conditions met the first frame of the track - it is a match
+
+    df_out = df.reset_index(drop=True)
+
+    return df_out
+
+
 def get_trackMotion(dft,plot_flag = False):
     # Input df of 1 track
     dft.sort_values(by=['frame'])
@@ -1013,3 +1156,115 @@ def bboxAnimation(movie_path,det_file,save_in = None,VID_FLAG = False,score_key 
     if VID_FLAG:
         out.release()
     return
+
+
+
+def positive_integer(number):
+    """
+    Convert a number to an positive integer if possible.
+    :param number: The number to be converted to a positive integer.
+    :return: The positive integer
+    :raise: argparse.ArgumentTypeError if not able to do the conversion
+    """
+    try:
+        integ = int(number)
+        if integ >= 0:
+            return integ
+        else:
+            raise argparse.ArgumentTypeError('%s is not a positive integer' % number)
+    except ValueError:
+        raise argparse.ArgumentTypeError('%s is not a positive integer' % number)
+
+def show_gray_img(asd):
+    plt.imshow(asd, cmap='gray')
+    plt.show()
+
+
+def show_quiver(x_component_arrows, y_components_arrows):
+    plt.quiver(x_component_arrows, y_components_arrows)
+    plt.show()
+
+
+def subarray(array, (upper_left_pix_row, upper_left_pix_col), (lower_right_pix_row, lower_right_pix_col)):
+    """
+    Return a subarray containing the pixels delimited by the pixels between upper_left_pix and lower_right.
+    If asked for pixels outside the image boundary, such pixels have value 0.
+    """
+
+    if upper_left_pix_row > lower_right_pix_row or upper_left_pix_col > lower_right_pix_col:
+        raise ValueError('coordinates of the subarray should correspond to a meaningful rectangle')
+
+    orig_array = np.array(array)
+
+    num_rows = lower_right_pix_row - upper_left_pix_row + 1
+    num_cols = lower_right_pix_col - upper_left_pix_col + 1
+
+    subarr = np.zeros((num_rows, num_cols), dtype=orig_array.dtype)
+
+    # zoomed outside the original image
+    if lower_right_pix_col < 0 or lower_right_pix_row < 0 or \
+                    upper_left_pix_col > orig_array.shape[1] - 1 or upper_left_pix_row > orig_array.shape[0] - 1:
+        return subarr
+
+    # region of the original image that is inside the desired region
+    # (i = col, j=row)
+    # _________________________________
+    # |                                | original image
+    # |   _____________________________|____
+    # |   |(j_o_1, i_o_1)              |    |
+    # |   |             (j_o_2, i_o_2) |    |
+    # |___|____________________________|    |
+    # |                                 |
+    # |_________________________________|  sliced final image
+
+    if upper_left_pix_col < 0:
+        i_o_1 = 0
+    else:
+        i_o_1 = upper_left_pix_col
+    if upper_left_pix_row < 0:
+        j_o_1 = 0
+    else:
+        j_o_1 = upper_left_pix_row
+
+    if lower_right_pix_col > orig_array.shape[1] - 1:
+        i_o_2 = orig_array.shape[1] - 1
+    else:
+        i_o_2 = lower_right_pix_col
+    if lower_right_pix_row > orig_array.shape[0] - 1:
+        j_o_2 = orig_array.shape[0] - 1
+    else:
+        j_o_2 = lower_right_pix_row
+
+
+    # region of the final image that is inside the original image, and whose content will be taken from the orig im
+    # (i = col, j=row)
+    # _________________________________
+    # |                                | original image
+    # |   _____________________________|____
+    # |   |(j_f_1, i_f_1)              |    |
+    # |   |             (j_f_2, i_f_2) |    |
+    # |___|____________________________|    |
+    #     |                                 |
+    #     |_________________________________|  sliced final image
+
+    if upper_left_pix_col < 0:
+        i_f_1 = -upper_left_pix_col
+    else:
+        i_f_1 = 0
+    if upper_left_pix_row < 0:
+        j_f_1 = -upper_left_pix_row
+    else:
+        j_f_1 = 0
+
+    if lower_right_pix_col > orig_array.shape[1] - 1:
+        i_f_2 = (orig_array.shape[1] - 1) - upper_left_pix_col
+    else:
+        i_f_2 = num_cols - 1
+    if lower_right_pix_row > orig_array.shape[0] - 1:
+        j_f_2 = (orig_array.shape[0] - 1) - upper_left_pix_row
+    else:
+        j_f_2 = num_rows - 1
+
+    subarr[j_f_1:j_f_2 + 1, i_f_1:i_f_2 + 1] = orig_array[j_o_1:j_o_2 + 1, i_o_1:i_o_2 + 1]
+
+    return subarr

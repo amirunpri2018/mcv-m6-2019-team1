@@ -12,10 +12,23 @@ import matplotlib.pyplot as plt
 from matplotlib import gridspec
 #import matplotlib.ticker as ticker
 # Our LIBS
-import utils as utils
+#import utils as utils
 from skimage.measure import block_reduce
 
+# For block matching
 
+import argparse
+import itertools
+import math
+import sys
+import scipy.ndimage
+import time
+
+sys.path.append('/usr/local/lib/python2.7/site-packages')
+
+from skimage.io import imsave
+#from utils import positive_integer, subarray, show_quiver
+from organize_code.code.utils import subarray
 # Function for Optical Flow
 #==========================
 
@@ -67,7 +80,17 @@ def writeOF(OFdir,filename,Fu,Fv,valid_OF):
     flag_save = cv.imwrite(OF_path, np.uint16(OF))
 
 
+def OF2hsv(Fu, Fv):
+    imsize = np.shape(Fu)
+    imsize = imsize +(3,)
 
+    hsv = np.zeros(imsize, dtype=np.uint8)
+    hsv[..., 1] = 255
+
+    mag, ang = cv.cartToPolar(Fu, Fv)
+    hsv[..., 0] = ang * 180 / np.pi / 2
+    hsv[..., 2] = cv.normalize(mag, None, 0, 255, cv.NORM_MINMAX)
+    return cv.cvtColor(hsv, cv.COLOR_HSV2RGB)
 
 def plotOF(img1,img2, Fu, Fv, step = 20 , title_ = 'Test' ):
     """
@@ -120,12 +143,11 @@ def plotOF(img1,img2, Fu, Fv, step = 20 , title_ = 'Test' ):
     #cv.waitKey()
 
 
-def MSEN_PEPN(Fu1, Fv1, valid1, Fu2, Fv2, valid2):
+def MSEN_PEPN(Fu1, Fv1, valid1, Fu2, Fv2, valid2,ERR_TH =3):
     """
             # TODO:
     """
-    ERR_TH = 3
-
+    #ERR_TH = 3
     err_map,n_total = compute_errmap(Fu1, Fv1, valid1, Fu2, Fv2, valid2)
     outliers = np.zeros_like(err_map)
     outliers[err_map>ERR_TH] = 1
@@ -134,6 +156,37 @@ def MSEN_PEPN(Fu1, Fv1, valid1, Fu2, Fv2, valid2):
     #Pe = [x for x in err_map[:] if x>ERR_TH]
 
     return err_map,msen,pepn
+
+def ArtificialOF(bboxA,bboxB):
+    # bboxA bbox.append([getattr(bA, 'ymin'),getattr(bA, 'xmin'),getattr(bA, 'ymax'),getattr(bA, 'xmax')])
+
+    # meshgrid of bboxA
+    xA = np.arange(int(bboxA[1]), int(bboxA[3]))
+    yA = np.arange(int(bboxA[0]), int(bboxA[2]))
+    xB = np.linspace(int(bboxB[1]), int(bboxB[3]), len(xA))
+    yB = np.linspace(int(bboxB[0]), int(bboxB[2]), len(yA))
+    #print(xA)
+    #print(xB)
+    xA,yA = np.meshgrid(xA,yA)
+    xB,yB = np.meshgrid(xB,yB)
+
+    Du  = xB-xA
+    Dv = yB-yA
+    return Du,Dv
+
+
+
+def OFToRot(Du,Dv):
+    s = np.shape(Du)
+    #
+    x1,y1 = np.meshgrid(range(s[1]),range(s[0]))
+    x2 = x1+Du
+    y2 = y1+Dv
+    mag1, ang1 = cv.cartToPolar(x1,y1)
+    mag2, ang2 = cv.cartToPolar(x2,y2)
+
+    ang = ang2-ang1
+    return ang.mean()
 
 def compute_errmap(Fu1, Fv1, valid1, Fu2, Fv2, valid2):
     # compute error map between the optical flow result and GT
@@ -216,3 +269,216 @@ def angle_wrap(angle,radians=False):
         wrapped[wrapped>180.0] -= 360.0
 
     return wrapped
+
+
+def of_metrics(gt_folder, sequence, result_folder, result_file):
+
+    """
+    Calculate MSEN, PEPN for calculated optical flow.
+    :param: u1lk: x motion field
+    :param: v1lk: y motion field
+    :param: valid1lk: mask of valid pixels
+
+    :return: MSEN: MSEN error value
+    :return: PEPN: PEPN error value
+    :return: MSEN: errmap1: Error map
+    """
+
+    #gt_folder = '/home/agus/repos/mcv-m6-2019-team1/data/kitti_optical_flow/gt'
+    #seq1 = '000045_10.png'
+
+
+    [u1gt,v1gt,valid1gt] = readOF(gt_folder,sequence)
+    [u1lk, v1lk, valid1lk] = readOF(result_folder, result_file)
+
+    f, c = np.shape(valid1lk)
+    u1gt = u1gt[:f, :c]
+    v1gt = v1gt[:f, :c]
+    valid1gt = valid1gt[:f, :c]
+
+    errmap1, mse1,pepe1 = MSEN_PEPN(u1gt,v1gt,valid1gt,u1lk,v1lk,valid1lk)
+
+    return errmap1, mse1, pepe1
+
+
+def save_motion_field(motion_field_x, motion_field_y, block_size, res_filename, gt_folder, sequence):
+    # Upsample motion field to fit image size
+
+    motion_field_x_up1 = scipy.ndimage.zoom(motion_field_x, block_size, order=0)
+    motion_field_y_up1 = scipy.ndimage.zoom(motion_field_y, block_size, order=0)
+
+    [_, _, valid1gt] = utOF.readOF(gt_folder, sequence)
+
+    fgt, cgt = np.shape(valid1gt)
+    fx, cx = np.shape(motion_field_x_up1)
+    fy, cy = np.shape(motion_field_y_up1)
+
+    filx = fgt - fx
+    fily = fgt - fy
+    colx = cgt - cx
+    coly = cgt - cy
+
+    motion_field_x_up = np.pad(motion_field_x_up1,
+                               ((int(np.floor(filx / 2.)), int(np.ceil(filx / 2.))),
+                                (int(np.floor(colx / 2.)), int(np.ceil(colx / 2.)))),
+                               mode='edge')
+    motion_field_y_up = np.pad(motion_field_y_up1,
+                               ((int(np.floor(fily / 2.)), int(np.ceil(fily / 2.))),
+                                (int(np.floor(coly / 2.)), int(np.ceil(coly / 2.)))),
+                               mode='edge')
+
+    # Save motion field file:
+    utOF.writeOF('motion_fields', res_filename + 'mfield.png', motion_field_x_up, motion_field_y_up)
+
+
+def of_block_matching(target_frame_path, anchor_frame_path, block_size = 10, search_range = 20, save=False):
+
+    res_filename = 'b' + str(block_size) + 's' + str(search_range)
+
+    target_frm = cv.imread(target_frame_path,cv.IMREAD_GRAYSCALE)
+    anchor_frm = cv.imread(anchor_frame_path,cv.IMREAD_GRAYSCALE)
+
+    #target_frm = cv.cvtColor(target_frm, cv.COLOR_BGR2GRAY)
+    #anchor_frm = cv.cvtColor(anchor_frm, cv.COLOR_BGR2GRAY)
+    norm = 1
+    pixel_acc = 1
+
+    ebma = EBMA_searcher(N=block_size,
+                         R=search_range,
+                         p=norm,
+                         acc=pixel_acc)
+
+    predicted_frm, motion_field = \
+        ebma.run(anchor_frame=anchor_frm,
+                 target_frame=target_frm)
+
+    motion_field_x = motion_field[:, :, 0]
+    motion_field_y = motion_field[:, :, 1]
+
+    error_image = abs(np.array(predicted_frm, dtype=float) - np.array(anchor_frm, dtype=float))
+    error_image = np.array(error_image, dtype=np.uint8)
+
+    # Peak Signal-to-Noise Ratio of the predicted image
+    mse = (np.array(error_image, dtype=float) ** 2).mean()
+    psnr = 10 * math.log10((255 ** 2) / mse)
+
+    if save:
+
+        # store frames in PNG for our records
+        os.system('mkdir -p frames_of_interest')
+        imsave('frames_of_interest/' + res_filename + 'target.png', target_frm)
+        imsave('frames_of_interest/' + res_filename + 'anchor.png', anchor_frm)
+
+        # store frames in PNG for our records
+        os.system('mkdir -p frames_of_interest')
+        imsave('frames_of_interest/' + res_filename + 'target.png', target_frm)
+        imsave('frames_of_interest/' + res_filename + 'anchor.png', anchor_frm)
+
+        # store predicted frame
+        imsave('frames_of_interest/' + res_filename + 'predicted_anchor.png', predicted_frm)
+
+        # store error image
+        imsave('frames_of_interest/' + res_filename + 'error_image_shelf.png', error_image)
+
+
+    return motion_field_x, motion_field_y
+
+class EBMA_searcher():
+    """
+    Estimates the motion between to frame images
+     by running an Exhaustive search Block Matching Algorithm (EBMA).
+    Minimizes the norm of the Displaced Frame Difference (DFD).
+    """
+
+    def __init__(self, N, R, p=1, acc=1):
+        """
+        :param N: Size of the blocks the image will be cut into, in pixels.
+        :param R: Range around the pixel where to search, in pixels.
+        :param p: Norm used for the DFD. p=1 => MAD, p=2 => MSE. Default: p=1.
+        :param acc: 1: Integer-Pel Accuracy (no interpolation),
+                    2: Half-Integer Accuracy (Bilinear interpolation)
+        """
+
+        self.N = N
+        self.R = R
+        self.p = p
+        self.acc = acc
+
+    def run(self, anchor_frame, target_frame ):
+        """
+        Run!
+        :param anchor_frame: Image that will be predicted.
+        :param target_frame: Image that will be used to predict the target frame.
+        :return: A tuple consisting of the predicted image and the motion field.
+        """
+
+        acc = self.acc
+        height = anchor_frame.shape[0]
+        width = anchor_frame.shape[1]
+        N = self.N
+        R = self.R
+        p = self.p
+
+        # interpolate original images if half-pel accuracy is selected
+        if acc == 1:
+            pass
+        elif acc == 2:
+            target_frame = cv.resize(target_frame, dsize=(width * 2, height * 2))
+        else:
+            raise ValueError('pixel accuracy should be 1 or 2. Got %s instead.' % acc)
+
+        # predicted frame. anchor_frame is predicted from target_frame
+        predicted_frame = np.empty((height, width), dtype=np.uint8)
+
+        # motion field consisting in the displacement of each block in vertical and horizontal
+        motion_field = np.empty((int(height / N), int(width / N), 2))
+
+        # loop through every NxN block in the target image
+        for (blk_row, blk_col) in itertools.product(xrange(0, height - (N - 1), N),
+                                                    xrange(0, width - (N - 1), N)):
+
+            # block whose match will be searched in the anchor frame
+            print(blk_row, blk_col)
+            blk = anchor_frame[blk_row:blk_row + N, blk_col:blk_col + N]
+
+            # minimum norm of the DFD norm found so far
+            dfd_n_min = np.infty
+
+            # search which block in a surrounding RxR region minimizes the norm of the DFD. Blocks overlap.
+            for (r_col, r_row) in itertools.product(range(-R, (R + N)),
+                                                    range(-R, (R + N))):
+                #print(r_col, r_row)
+                # candidate block upper left vertex and lower right vertex position as (row, col)
+                up_l_candidate_blk = ((blk_row + r_row) * acc, (blk_col + r_col) * acc)
+                low_r_candidate_blk = ((blk_row + r_row + N - 1) * acc, (blk_col + r_col + N - 1) * acc)
+
+                # don't search outside the anchor frame. This lowers the computational cost
+                if up_l_candidate_blk[0] < 0 or up_l_candidate_blk[1] < 0 or \
+                                low_r_candidate_blk[0] > height * acc - 1 or low_r_candidate_blk[1] > width * acc - 1:
+                    continue
+
+                # the candidate block may fall outside the anchor frame
+                candidate_blk = subarray(target_frame, up_l_candidate_blk, low_r_candidate_blk)[::acc, ::acc]
+                assert candidate_blk.shape == (N, N)
+
+                dfd = np.array(candidate_blk, dtype=np.float16) - np.array(blk, dtype=np.float16)
+
+                candidate_dfd_norm = np.linalg.norm(dfd, ord=p)
+
+                # a better matching block has been found. Save it and its displacement
+                if candidate_dfd_norm < dfd_n_min:
+                    dfd_n_min = candidate_dfd_norm
+                    matching_blk = candidate_blk
+                    dy = r_col
+                    dx = r_row
+
+            # construct the predicted image with the block that matches this block
+            predicted_frame[blk_row:blk_row + N, blk_col:blk_col + N] = matching_blk
+
+            #print str((blk_row / N, blk_col / N)) + '--- Displacement: ' + str((dx, dy))
+
+            # displacement of this block in each direction
+            motion_field[blk_row / N, blk_col / N, 1] = dx
+            motion_field[blk_row / N, blk_col / N, 0] = dy
+
+        return predicted_frame, motion_field
