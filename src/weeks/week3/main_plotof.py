@@ -29,11 +29,11 @@ import metrics.video as m
 OUTPUT_DIR ='../output'
 ROOT_DIR = '../'
 # Some constant for the script
-N = 1
-DET = 'YOLO_refine'
+N = 3
+DET = 'YOLO'
 EXP_NAME = '{}_N{}'.format(DET, N)
 TASK = 'task3'
-WEEK = 'week3'
+WEEK = 'week4'
 DET_GAP = 5
 PLOT_FLAG = True
 VID_FLAG = False
@@ -66,7 +66,7 @@ def main():
     #gt_file = os.path.join(ROOT_DIR,'data', 'm6-full_annotation.xml')
     gt_file = os.path.join(ROOT_DIR,'data', 'm6-full_annotation2.pkl')
     gt = pd.read_pickle(gt_file)
-    print(len(gt))
+    #print(len(gt))
     # remove bicycles
     gt = gt[gt.label =='car']
     gt = gt[gt.frame < 300]
@@ -86,6 +86,6 @@ def main():
     res_file = os.path.join( results_dir,'result_mat.pkl')
 
     if SAVE_FLAG:
-        ut.bboxAnimation(frames_dir,det_file,save_in = results_dir)
+        ut.bboxAnimationOF(frames_dir,det_file,score_key ='OF_err',save_in = results_dir)
     else:
-        ut.bboxAnimation(frames_dir,det_file)
+        ut.bboxAnimationOF(frames_dir,det_file,score_key ='OF_err')

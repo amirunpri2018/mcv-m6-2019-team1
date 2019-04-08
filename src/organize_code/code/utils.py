@@ -640,6 +640,70 @@ def get_files_from_dir2(cdir,ext = None):
 
     return file_list
 
+def plot_traj(img, bboxes,traj=[],l=[],ax=None , title=''):
+    if plt.gca() is None:
+        fig, ax = plt.subplots(figsize=(10, 6))
+    else:
+        ax = plt.gca()
+    #ax = plt.gca
+    ax.cla()
+    ax.imshow(img,cmap='gray')
+    #print(l_bboxes)
+    colors = 'bgrcmykw'
+
+    # label as numbers
+    i=0
+
+    if l==[]:
+        l = range(np.shape(bboxes)[0])
+        #Ntext = 1
+
+    if len(np.shape(l))==1:
+        l=[l]
+
+    Ntext = len(l)
+    #tr = traj.groupby('track_id')
+    #keys = tr.groups.keys
+
+    for bbox in bboxes:
+
+        tj  = traj[traj['track_id'] ==l[0][i] ]
+
+
+
+        #bbox = int(bbox)
+        bbox = np.asarray(bbox,dtype= np.int)
+
+        cl_idx = int(l[0][i]) % 8
+        color = colors[cl_idx]
+        rect = patches.Rectangle((bbox[1], bbox[0]), bbox[3] - bbox[1], bbox[2] - bbox[0], linewidth=1, edgecolor=color, facecolor=color,alpha=0.2,hatch=r"//") #hatch=r"//",alpha=0.1,label=str(l[i]))
+        rect2 = patches.Rectangle((bbox[1], bbox[0]), bbox[3] - bbox[1], bbox[2] - bbox[0], linewidth=1, edgecolor=color,fill=False)
+        # Add the patch to the Axes
+        ax.add_patch(rect)
+        ax.set
+        ax.add_patch(rect2)
+        ax.set
+        if len(tj)>0:
+            ax.autoscale(False)
+            ax.plot(tj['dy'].tolist()[0],tj['dx'].tolist()[0], linewidth=2, color=color,linestyle='-')
+            ax.set
+            ax.plot(tj['dyof'].tolist()[0],tj['dxof'].tolist()[0], linewidth=2, color=color,linestyle=':')
+            ax.set
+        plt.text(bbox[1],bbox[0],str(int(l[0][i])),{'color': 'w','fontweight':'bold'},bbox={'facecolor':color,'edgecolor':color, 'alpha':0.7,'pad':0})
+        for t in range(1,Ntext):
+
+
+            plt.text(bbox[1],bbox[2]+20,'{:0.2f}'.format(l[t][i]))
+
+
+        i+=1
+    ax.set_title(title)
+    plt.pause(0.001)
+
+
+
+
+        #ax.set
 def plot_bboxes(img, bboxes,l=[],ax=None , title=''):
     #if ax is None:
 
@@ -1158,6 +1222,149 @@ def bboxAnimation(movie_path,det_file,save_in = None,VID_FLAG = False,score_key 
     return
 
 
+def bboxAnimationOF(movie_path,det_file,save_in = None,VID_FLAG = False,score_key ='conf'):
+    """
+    Input:
+    movie_path
+        If movie path is a movie - load and extract frame - # TODO:
+        If movie path is a folder - load images
+    det_file : xml,txt or pkl
+        panda list with the following column names
+            ['frame','track_id', 'xmax', 'xmin', 'ymax', 'ymin']
+    save_in
+        folder to save output frames / movie -# TODO:
+
+    """
+    if os.path.isdir(movie_path):
+        DIR_FLAG =True
+    else:
+        DIR_FLAG = False
+
+
+    # Create folders if they don't exist
+    if save_in is not None and not os.path.isdir(save_in):
+        os.mkdir(save_in)
+
+    # Get BBox detection from list
+    df = getBBox_from_gt(det_file)
+
+    df.sort_values(by=['frame'])
+
+    # Group bbox by frame
+    df_grouped = df.groupby('frame')
+
+    # create trajectory of all track
+    df_track = df.groupby('track_id')
+
+    df_traj = pd.DataFrame({'track_id':[],'frame':[],'dx':[], 'dy':[], 'dxof':[], 'dyof':[]})
+    for id,tt in df_track:
+        print(id)
+
+        df_t = pd.DataFrame({'track_id':[],'frame':[],'dx':[], 'dy':[], 'dxof':[], 'dyof':[]})
+        f= tt['frame'].tolist()
+        f = f[1:]
+        dx_c = tt['Mx'].tolist()
+        dx_c = dx_c[1:]
+        dy_c = tt['My'].tolist()
+        dyof_c = tt['ofDv'].tolist()
+        dxof_c = tt['ofDu'].tolist()
+        dyof_c = [i * -1 for i in dyof_c]
+        dxof_c = [i * -1 for i in dxof_c]
+
+        dy_c = dy_c[1:]
+        dxof_c = dxof_c[1:]
+        dyof_c = dyof_c[1:]
+        dxof_c[0] = dx_c[0]
+        dyof_c[0] = dy_c[0]
+
+        dxof_c = np.cumsum(dxof_c)
+        dyof_c = np.cumsum(dyof_c)
+
+        for ii in range(1,len(dx_c)) :
+            c_df = pd.DataFrame({'track_id':[],'frame':[],'dx':[], 'dy':[], 'dxof':[], 'dyof':[]})
+            c_df['frame'] = [f[ii]]
+            c_df['track_id']= [id]
+            c_df['dx']= [dx_c[:ii]]
+            c_df['dy']= [dy_c[:ii]]
+            c_df['dxof']= [dxof_c[:ii]]
+            c_df['dyof']= [dyof_c[:ii]]
+
+
+            df_t =df_t.append(c_df)
+        df_traj = df_traj.append(df_t)
+    #print(df_traj)
+    df_traj_tr = df_traj.groupby('frame')
+    print(df_traj['frame'])
+    headers = list(df.head(0))
+    print(headers )
+    df_track = pd.DataFrame(columns=headers)
+
+    first_frame = True
+    #save_in_bkp = save_in
+    #save_in = None
+    for f, df_group in df_grouped:
+        df_group = df_group.reset_index(drop=True)
+
+        #if f>=300:
+        #    save_in = save_in_bkp
+
+        if DIR_FLAG:
+            im_path = os.path.join(movie_path,'frame_'+str(int(f)).zfill(3)+'.jpg')
+            if not os.path.isfile(im_path):
+                break
+
+
+        # 1st frame -
+        if first_frame:
+
+            plt.ion()
+            plt.show()
+            fig = plt.figure()
+            ax = fig.add_subplot(111)
+
+            bbox =  bb.bbox_list_from_pandas(df_group)
+            plot_bboxes(cv.imread(im_path,cv.CV_LOAD_IMAGE_GRAYSCALE),bbox,l=df_group['track_id'].tolist(),ax=ax,title = str(f))
+
+            if save_in is not None:
+                img = np.fromstring(fig.canvas.tostring_rgb(), dtype=np.uint8, sep='')
+                img  = img.reshape(fig.canvas.get_width_height()[::-1] + (3,))
+                img = cv.cvtColor(img,cv.COLOR_RGB2BGR)
+
+            #cv.imshow(img)
+                if VID_FLAG:
+                    fourcc = cv.cv.CV_FOURCC('M','J','P','G')
+
+                    s = np.shape(img)
+                    out = cv.VideoWriter(os.path.join(save_in,"IOU.avi"),fourcc, 30.0, (s[0],s[1]))
+                    out.write(img)
+            first_frame = False
+            continue
+
+        bbox =  bb.bbox_list_from_pandas(df_group)
+        headers = list(df.head(0))
+
+
+        if f in df_traj_tr.groups.keys():
+
+            tj = df_traj_tr.get_group(f)
+            plot_traj(cv.imread(im_path,cv.CV_LOAD_IMAGE_GRAYSCALE), bbox,traj=tj,l=[df_group['track_id'].tolist(),df_group[score_key].tolist()],ax=ax , title= "frame: "+str(f))
+        else:
+            plot_bboxes(cv.imread(im_path,cv.CV_LOAD_IMAGE_GRAYSCALE),bbox,l=[df_group['track_id'].tolist(),df_group[score_key].tolist()],ax=ax,title = "frame: "+str(f))
+        if save_in is not None:
+            img = np.fromstring(fig.canvas.tostring_rgb(), dtype=np.uint8, sep='')
+            img  = img.reshape(fig.canvas.get_width_height()[::-1] + (3,))
+            img = cv.cvtColor(img,cv.COLOR_RGB2BGR)
+            cv.imwrite(os.path.join(save_in,"{}.png".format(f)), img);
+
+            if VID_FLAG:
+
+                out.write(img)
+
+
+    #    END OF PROCESS
+    if VID_FLAG:
+        out.release()
+    return
 
 def positive_integer(number):
     """
