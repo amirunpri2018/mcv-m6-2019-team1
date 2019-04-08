@@ -303,7 +303,7 @@ if __name__ == "__main__":
         pred_boxes = json.load(infile)
 
     # Runs it for one IoU threshold
-    iou_thr = 0.7
+    iou_thr = 0.5
     start_time = time.time()
     data = get_avg_precision_at_iou(gt_boxes, pred_boxes, iou_thr=iou_thr)
     end_time = time.time()
@@ -314,7 +314,7 @@ if __name__ == "__main__":
     ax = None
     avg_precs = []
     iou_thrs = []
-    for idx, iou_thr in enumerate(np.linspace(0.5, 0.95, 10)):
+    for idx, iou_thr in enumerate(np.linspace(0.5, 0.50001, 2)):
         data = get_avg_precision_at_iou(gt_boxes, pred_boxes, iou_thr=iou_thr)
         avg_precs.append(data['avg_prec'])
         iou_thrs.append(iou_thr)
