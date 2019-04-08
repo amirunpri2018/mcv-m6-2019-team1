@@ -140,18 +140,22 @@ def main():
     print(pd.__version__)
     #import src
     OUTPUT_DIR ='../output'
-    ROOT_DIR = '../'
+    ROOT_DIR = '../../aic19-track1-mtmc-train/'
+
     # Some constant for the script
     N = 1
     DET = 'TEST_MAX'
     EXP_NAME = '{}_N{}'.format(DET, N)
     TASK = 'task3'
     WEEK = 'week4'
+    SEQ = 'S03'
+    CAM = 'c010'
     results_dir = os.path.join(OUTPUT_DIR, WEEK, TASK, EXP_NAME)
 
 
     #gt_file = os.path.join(ROOT_DIR,'data', 'm6-full_annotation.xml')
-    gt_file = os.path.join(ROOT_DIR,'data', 'm6-full_annotation300.pkl')
+    #gt_file = os.path.join(ROOT_DIR,'data', 'm6-full_annotation300.pkl')
+    gt_file = os.path.join(ROOT_DIR, 'train', SEQ, CAM, 'gt', 'gt.pkl')
 
     if os.path.isfile(gt_file):
         GT = pd.read_pickle(gt_file)
