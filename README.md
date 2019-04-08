@@ -12,6 +12,12 @@ we used in the following weeks.
 The main goal of this week is to estimate the background in a video sequence
 using different statistical models and compute the metrics to compare them.
 
+### Week 3
+Detection using Deep learning networks and comparing tracking methods.
+
+### Week 4
+This week goal was to evaluate the contribution of Optical Flow in video stabilization and tracking. 
+comparing different method to obtain the motion field.
 
 ## Code
 

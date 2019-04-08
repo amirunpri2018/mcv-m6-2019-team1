@@ -36,15 +36,15 @@ else:
 OUTPUT_DIR ='../output'
 ROOT_DIR = '../'
 # Some constant for the script
-N = 1
-DET = 'TEST'
+N = 2
+DET = 'YOLO'
 EXP_NAME = '{}_N{}'.format(DET, N)
 TASK = 'task3'
-WEEK = 'week3'
+WEEK = 'week4'
 DET_GAP = 5
 PLOT_FLAG = False
 VID_FLAG = False
-SAVE_FLAG = True
+SAVE_FLAG = False
 REFINE = True
 
 def main():
@@ -80,9 +80,6 @@ def main():
     # no need to load all the data
     res_file = os.path.join( results_dir,'result_mat.pkl')
 
-    if PLOT_FLAG:
-        ut.bboxAnimation(frames_dir,det_file,save_in = results_dir)
-
 
     if os.path.isfile(res_file):
         result_list = pd.read_pickle(res_file)
@@ -91,12 +88,17 @@ def main():
         df_gt = ut.getBBox_from_gt(gt_file)
         df_det = ut.getBBox_from_gt(det_file)
         if REFINE:
-            #df_det = ut.track_cleanup(df_det,MIN_TRACK_LENGTH=10,MOTION_MERGE=5)
-            df_det = ut.track_cleanup(df_det,MOTION_MERGE=5)
-            df_det.to_pickle(os.path.join(results_dir,'pred_refine2_tracks.pkl'))
+            #df_det = ut.track_cleanup(df_det,MIN_TRACK_LENGTH=10)
+            df_det = ut.track_cleanup(df_det,MIN_TRACK_LENGTH=10,MOTION_MERGE=5)
+            #df_det = ut.track_cleanup(df_det,MOTION_MERGE=5)
+            det_file=os.path.join(results_dir,'pred_refine2_tracks.pkl')
+            df_det.to_pickle(det_file)
             #df_det = ut.track_cleanup(df_det,MIN_TRACK_LENGTH=7,STATIC_OBJECT = 0.90)
 
         result_list = m.PandaTpFp(df_det,df_gt ,iou_thresh = 0.5,save_in =res_file)
+
+    if PLOT_FLAG:
+        ut.bboxAnimation(frames_dir,det_file,save_in = results_dir)
 
 
     # Computing mAP for detections

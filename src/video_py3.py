@@ -28,8 +28,9 @@ def convert_pkalman(df):
     df = df.rename(columns={"img_id": "frame"})
     if 'scores' in df.head(0):
          df = df.rename(columns={"scores": "conf"})
-     else:
+    else:
          df.loc[:,'conf']=1.0
+
     df.loc[:,'xmin']=0.0
     df.loc[:,'ymin']=0.0
     df.loc[:,'xmax']=0.0
@@ -139,18 +140,22 @@ def main():
     print(pd.__version__)
     #import src
     OUTPUT_DIR ='../output'
-    ROOT_DIR = '../'
+    ROOT_DIR = '../../aic19-track1-mtmc-train/'
+
     # Some constant for the script
     N = 1
-    DET = 'GT_XML'
+    DET = 'TEST_MAX'
     EXP_NAME = '{}_N{}'.format(DET, N)
-    TASK = 'task1'
-    WEEK = 'week3'
+    TASK = 'task3'
+    WEEK = 'week4'
+    SEQ = 'S03'
+    CAM = 'c010'
     results_dir = os.path.join(OUTPUT_DIR, WEEK, TASK, EXP_NAME)
 
 
     #gt_file = os.path.join(ROOT_DIR,'data', 'm6-full_annotation.xml')
-    gt_file = os.path.join(ROOT_DIR,'data', 'm6-full_annotation2.pkl')
+    #gt_file = os.path.join(ROOT_DIR,'data', 'm6-full_annotation300.pkl')
+    gt_file = os.path.join(ROOT_DIR, 'train', SEQ, CAM, 'gt', 'gt.pkl')
 
     if os.path.isfile(gt_file):
         GT = pd.read_pickle(gt_file)
