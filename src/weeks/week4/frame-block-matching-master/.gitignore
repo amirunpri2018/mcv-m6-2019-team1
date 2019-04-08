@@ -1,0 +1,8 @@
+*.pyc
+*.zip
+*.idea
+*~
+*.Y
+img/*
+*.pdf
+frames_of_interest/*
