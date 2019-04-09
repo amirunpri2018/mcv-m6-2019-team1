@@ -12,9 +12,14 @@ pd.__version__
 import numpy as np
 
 import os
-
+import sys
 # metric MOT - requires python3
-import motmetrics as mm
+if int(sys.version_info[0]) < 3:
+    import organize_code.code.utils as ut
+    PY_VER = 2
+else:
+    PY_VER = 3
+    import motmetrics as mm
 COLORS = [
     '#1f77b4', '#aec7e8', '#ff7f0e', '#ffbb78', '#2ca02c',
     '#98df8a', '#d62728', '#ff9896', '#9467bd', '#c5b0d5',
@@ -73,16 +78,19 @@ def getIDF1(Pred,GT):
 
     all_frames = list(set(frames_ingt + frames_inpred))
 
-
+    missing_frm = list()
+    missing_pred = list()
     for f in all_frames:
-        if f%50==0:
+        if f%500==0:
             print('frame: {}'.format(f))
 
         if f not in frames_ingt:
             g = []
             tk_g =[]
             gt_bbox = []
-            print('No GT in frame #{} '.format(f))
+            print(type(f))
+            missing_frm.append(f)
+
             continue
         else:
             g = PGTs.get_group(f)
@@ -95,7 +103,8 @@ def getIDF1(Pred,GT):
             p = []
             tk_p = []
             pred_bbox = []
-            print('No prediction in frame #{} '.format(f))
+            missing_pred.append(f)
+
         else:
             p = PPreds.get_group(f)
             tk_p = p['track_id'].tolist()
@@ -111,10 +120,16 @@ def getIDF1(Pred,GT):
         tk_p,                  # Detector hypotheses in this frame
         dist                # Distances from object 'a' to hypotheses 1, 2, 3
         )
+
+    if len(missing_frm)>0:
+
+        print('No GT in frames: #[{}] '.format(missing_frm))
+    if len(missing_pred)>0:
+        print('No prediction in frames #[{}] '.format(missing_pred))
     mh = mm.metrics.create()
     summary = mh.compute(acc, metrics=['num_frames', 'mota', 'motp','idf1'], name='acc')
     print(summary)
-    return mh
+    return mh,summary
 
 def prepare_list(Pred,GT):
     Pred.loc[:,'metric'] = 'FP'
@@ -148,34 +163,77 @@ def main():
 
     TASK = 'task2'
     WEEK = 'week5'
-    SEQ = 'S03'
-    CAM = 'c010'
-    EXP_NAME = '{}_{}_{}_N{}'.format(SEQ,CAM,DET, N)
-    results_dir = os.path.join(OUTPUT_DIR, WEEK, TASK, EXP_NAME)
+    #SEQ = 'S03'
+    #CAM = 'c010'
+    save_in = os.path.join(OUTPUT_DIR,WEEK,TASK,'results.csv')
+    EXP_LIST = os.listdir(os.path.join(OUTPUT_DIR,WEEK,TASK))
+    EXP_LIST = EXP_LIST[:2]
+    #os.path.join(directory, f) for f in os.listdir(OUTPUT_DIR)
+    #EXP_NAME = '{}_{}_{}_N{}'.format(SEQ,CAM,DET, N)
 
 
-    #gt_file = os.path.join(ROOT_DIR,'data', 'm6-full_annotation.xml')
-    #gt_file = os.path.join(ROOT_DIR,'data', 'm6-full_annotation300.pkl')
-    gt_file = os.path.join(ROOT_DIR, 'train', SEQ, CAM, 'gt', 'gt.pkl')
+    headers_relevant = ['Exp_name','Seq','Camera',	'idf1','motp','mota']
+    Results = pd.DataFrame(columns=headers_relevant)
 
-    if os.path.isfile(gt_file):
-        GT = pd.read_pickle(gt_file)
-    else:
-        print('couldnt load :')
-        print(gt_file)
-    # detection file can be txt/xml/pkl
-    #det_file = os.path.join(results_dir,'kalman_out.pkl')
-    det_file = os.path.join(results_dir,'pred_tracks.pkl')
-    if os.path.isfile(det_file):
-        Pred = pd.read_pickle(det_file)
+    for EXP_NAME in EXP_LIST:
+        SEQ = EXP_NAME.split('_')[0]
+        CAM = EXP_NAME.split('_')[1]
+        print('calculating IDF1 for seq {} and cam {}'.format(SEQ,CAM))
+        results_dir = os.path.join(OUTPUT_DIR, WEEK, TASK, EXP_NAME)
 
-        if any(x == 'boxes' for x in list(Pred.head(0))) and not any(x == 'xmin' for x in list(Pred.head(0))):
-            print('coverting pandas format..')
-            Pred = convert_pkalman(Pred)
-    else:
-        print('couldnt load :')
-        print(det_file)
-    mh = getIDF1(Pred,GT)
+
+        #gt_file = os.path.join(ROOT_DIR,'data', 'm6-full_annotation.xml')
+        #gt_file = os.path.join(ROOT_DIR,'data', 'm6-full_annotation300.pkl')
+        if PY_VER==2:
+            gt_file = os.path.join(ROOT_DIR, 'train', SEQ, CAM, 'gt', 'gt.txt')
+            out_file = os.path.join(ROOT_DIR, 'train', SEQ, CAM, 'gt', 'gt.pkl')
+            if os.path.isfile(out_file):
+                continue
+            if not os.path.isfile(out_file):
+                continue
+            ut.getBBox_from_gt(gt_file,save_in = out_file)
+            continue
+
+        gt_file = os.path.join(ROOT_DIR, 'train', SEQ, CAM, 'gt', 'gt.pkl')
+
+        if os.path.isfile(gt_file):
+            GT = pd.read_pickle(gt_file)
+        else:
+            print('couldnt load :')
+            print(gt_file)
+            continue
+
+        current = pd.DataFrame(columns=headers_relevant)
+
+
+            # detection file can be txt/xml/pkl
+        #det_file = os.path.join(results_dir,'kalman_out.pkl')
+        det_file = os.path.join(results_dir,'pred_tracks.pkl')
+        if os.path.isfile(det_file):
+            Pred = pd.read_pickle(det_file)
+
+            if any(x == 'boxes' for x in list(Pred.head(0))) and not any(x == 'xmin' for x in list(Pred.head(0))):
+                print('coverting pandas format..')
+                Pred = convert_pkalman(Pred)
+        else:
+            print('couldnt load :')
+            print(det_file)
+        mh,sm = getIDF1(Pred,GT)
+        #print(sm.acc)
+
+        #print(mh.idf1)
+        current['Exp_name'] = [EXP_NAME]
+        current['Seq'] = [SEQ]
+        current['Camera'] = [CAM]
+        current['idf1'] = [sm.ix[:,'idf1']]
+        current['motp'] = [sm.ix[:,'motp']]
+        current['mota'] = [sm.ix[:,'mota']]
+
+        Results = Results.append(current ,ignore_index=True)
+
+    if PY_VER==3:
+        export_csv = Results.to_csv(save_in, sep='\t', encoding='utf-8')
+
 
 
 ######################

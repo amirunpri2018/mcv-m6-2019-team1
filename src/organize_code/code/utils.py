@@ -914,19 +914,34 @@ def track_cleanup(df,MIN_TRACK_LENGTH=5,STATIC_OBJECT = None,MOTION_MERGE = None
 
 
     if STATIC_OBJECT is not None:
-        tk_df = df.groupby('track_id')
-        for id,tk in tk_df:
-            iou_mat = bb.bbox_lists_iou(tk,tk)
-            if np.all(iou>STATIC_OBJECT,'all'):
 
-                tk_df.filter(lambda x: x['track_id'] == id)
+        df_g = df.groupby('track_id', as_index=False)
+        trk_ids = list()
+        for t, d in df_g:
 
-        df = pd.concat(tk_df,axis=0)
-        #df_out = df_out.reset_index()
+            d = d.agg({'Mx':'std','My':'std'})
+
+            if (d['Mx']+d['My'])/2 > STATIC_OBJECT:
+                trk_ids.append(t)
+
+
+        df =df[df['track_id'].isin(trk_ids)]
+
+
+        print('all static Tracks with a std lower than {}-were remove'.format(STATIC_OBJECT))
+
 
     df_out = df.reset_index(drop=True)
 
     return df_out
+
+def std2(x):
+    print(x.head(0))
+    print('printing std...')
+    print(x)
+    print('===================')
+    x['Mx']=sum(x['Mx'])+sum(x['My'])/2
+    return(y)
 
 def OF_refine_trk(df,pic_dir,alpha=0.9):
     """
@@ -1475,3 +1490,24 @@ def subarray(array, (upper_left_pix_row, upper_left_pix_col), (lower_right_pix_r
     subarr[j_f_1:j_f_2 + 1, i_f_1:i_f_2 + 1] = orig_array[j_o_1:j_o_2 + 1, i_o_1:i_o_2 + 1]
 
     return subarr
+
+def obtain_timeoff_fps(ROOT_DIR,sequence, camera):
+
+    """Input: Sequence number, Camera number
+    Output: Time offset, fps"""
+
+    tstamp_path = os.path.join(ROOT_DIR,'info', 'cam_timestamp', sequence + '.txt')
+
+    with open(tstamp_path) as f:
+        lines = f.readlines()
+        for l in lines:
+            cam, time_off = l.split()
+            if cam == 'c015':
+                fps = 8.0
+            else:
+                fps = 10.0
+            if camera == cam:
+                return np.float(time_off), np.float(fps)
+
+def timestamp_calc(frame, time_offset, fps):
+    return frame / fps + time_offset
