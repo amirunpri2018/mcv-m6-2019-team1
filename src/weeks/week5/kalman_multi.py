@@ -32,29 +32,13 @@ TASK = 'task_kalman_multi'
 WEEK = 'week5'
 
 SEQ = 'S03'
-CAM = 'c015'
-INPUT = 'det_mask_rcnn'
+cameras = ['c010', 'c011', 'c012', 'c013', 'c014', 'c015']
+#CAM = 'c015'
+#INPUT = 'det_mask_rcnn'
+INPUT = 'det_yolo3'
 
-CREATE_GT_PKL = True
+CREATE_GT_PKL = False
 
-# Set useful directories
-frames_dir = os.path.join(
-    ROOT_DIR,
-    'train',
-    SEQ,
-    CAM,
-    'frames')
-
-
-results_dir = os.path.join(OUTPUT_DIR, WEEK, TASK)
-
-# Create folders if they don't exist
-if not os.path.isdir(results_dir):
-    os.mkdir(results_dir)
-
-
-tstamp_path = os.path.join(ROOT_DIR, 'cam_timestamp', SEQ + '.txt')
-time_offset, fps = ut.obtain_timeoff_fps(tstamp_path, CAM)
 
 # Tracker graphic options:
 display = False
@@ -62,114 +46,132 @@ save = False
 
 def main():
 
-    # Ground truth file path:
+    for CAM in cameras:
+        # Set useful directories
+        frames_dir = os.path.join(
+            ROOT_DIR,
+            'train',
+            SEQ,
+            CAM,
+            'frames')
 
-    gt_det = os.path.join(ROOT_DIR, 'train', SEQ, CAM, 'det', INPUT + '.txt')
+        results_dir = os.path.join(OUTPUT_DIR, WEEK, TASK)
 
-    # Save gt file as pkl:
+        # Create folders if they don't exist
+        if not os.path.isdir(results_dir):
+            os.mkdir(results_dir)
 
-    if CREATE_GT_PKL == True:
-        gt_txt = os.path.join(ROOT_DIR, 'train', SEQ, CAM, 'gt', 'gt.txt')
-        save_gt_pkl = os.path.join(ROOT_DIR, 'train', SEQ, CAM, 'gt', 'gt.pkl')
-        code_ut.getBBox_from_gt(gt_txt, save_in=save_gt_pkl)
+        tstamp_path = os.path.join(ROOT_DIR, 'cam_timestamp', SEQ + '.txt')
+        time_offset, fps = ut.obtain_timeoff_fps(tstamp_path, CAM)
 
-    # Get BBox detection from list
-    df = ut.get_bboxes_from_MOTChallenge(gt_det)
-    df.loc[:, 'time_stamp'] = df['frame'].values.tolist()
+        # Ground truth file path:
 
-    # Display data:
-    colours = np.random.rand(32,3) # Used only for display
+        gt_det = os.path.join(ROOT_DIR, 'train', SEQ, CAM, 'det', INPUT + '.txt')
 
-    # Sort and group bbox by frame:
-    df.sort_values(by=['frame'])
-    df_grouped = df.groupby('frame')
+        # Save gt file as pkl:
 
-    total_time = 0.0
-    total_frames = 0
-    out = []
+        if CREATE_GT_PKL == True:
+            gt_txt = os.path.join(ROOT_DIR, 'train', SEQ, CAM, 'gt', 'gt.txt')
+            save_gt_pkl = os.path.join(ROOT_DIR, 'train', SEQ, CAM, 'gt', 'gt.pkl')
+            code_ut.getBBox_from_gt(gt_txt, save_in=save_gt_pkl)
 
-    if display:
-        plt.ion()  # for iterative display
-        fig, ax = plt.subplots(1, 2, figsize=(20, 20))
+        # Get BBox detection from list
+        df = ut.get_bboxes_from_MOTChallenge(gt_det)
+        df.loc[:, 'time_stamp'] = df['frame'].values.tolist()
 
-    # Create instance of the SORT tracker
-    mot_tracker = Sort()
+        # Display data:
+        colours = np.random.rand(32,3) # Used only for display
 
-    for f, df_group in df_grouped:
+        # Sort and group bbox by frame:
+        df.sort_values(by=['frame'])
+        df_grouped = df.groupby('frame')
 
-        frame = int(df_group['frame'].values[0])
+        total_time = 0.0
+        total_frames = 0
+        out = []
 
-        time_stamp = ut.timestamp_calc(frame, time_offset, fps)
+        if display:
+            plt.ion()  # for iterative display
+            fig, ax = plt.subplots(1, 2, figsize=(20, 20))
 
-        df_gt = df_group[['ymin', 'xmin', 'ymax', 'xmax']].values.tolist()
+        # Create instance of the SORT tracker
+        mot_tracker = Sort()
+
+        for f, df_group in df_grouped:
+
+            frame = int(df_group['frame'].values[0])
+
+            time_stamp = ut.timestamp_calc(frame, time_offset, fps)
+
+            df_gt = df_group[['ymin', 'xmin', 'ymax', 'xmax']].values.tolist()
 
 
-        # Reshape GT format for Kalman tracking algorithm:
-        # [x1,y1,x2,y2] format for the tracker input:
+            # Reshape GT format for Kalman tracking algorithm:
+            # [x1,y1,x2,y2] format for the tracker input:
 
-        df_gt = np.asarray(df_gt)
-        dets = np.stack([df_gt[:,1], df_gt[:,0], df_gt[:,3], df_gt[:,2]], axis=1)
-        dets = np.reshape(dets, (len(dets), -1))
-        dets = np.asarray(dets, dtype=np.float64, order='C')
+            df_gt = np.asarray(df_gt)
+            dets = np.stack([df_gt[:,1], df_gt[:,0], df_gt[:,3], df_gt[:,2]], axis=1)
+            dets = np.reshape(dets, (len(dets), -1))
+            dets = np.asarray(dets, dtype=np.float64, order='C')
 
 
-        if (display):
-            fn = frames_dir + '/frame_%04d.jpg' % (frame)  # read the frame
-            im = io.imread(fn)
-            ax[0].imshow(im)
-            ax[0].axis('off')
-            ax[0].set_title('Original R-CNN detections (untracked)')
-            for j in range(np.shape(dets)[0]):
-                color = 'r'
-                coords = (dets[j, 0].astype(np.float), dets[j, 1].astype(np.float)), dets[j, 2].astype(np.float) - dets[j, 0].astype(np.float), dets[j, 3].astype(np.float) - dets[j, 1].astype(np.float)
-                ax[0].add_patch(plt.Rectangle(*coords, fill=False, edgecolor=color, lw=3))
-
-        total_frames += 1
-
-        if (display):
-            ax[1].imshow(im)
-            ax[1].axis('off')
-            ax[1].set_title('Tracked Targets')
-
-        start_time = time.time()
-        trackers = mot_tracker.update(dets)
-        cycle_time = time.time() - start_time
-        total_time += cycle_time
-
-        out.append([frame, trackers, time_stamp])
-
-        for d in trackers:
             if (display):
-                d = d.astype(np.uint32)
-                ax[1].add_patch(
-                    patches.Rectangle((d[0], d[1]), d[2] - d[0], d[3] - d[1], fill=False, lw=3, ec=colours[d[4] % 32, :]))
-                ax[1].set_adjustable('box-forced')
+                fn = frames_dir + '/frame_%04d.jpg' % (frame)  # read the frame
+                im = io.imread(fn)
+                ax[0].imshow(im)
+                ax[0].axis('off')
+                ax[0].set_title('Original R-CNN detections (untracked)')
+                for j in range(np.shape(dets)[0]):
+                    color = 'r'
+                    coords = (dets[j, 0].astype(np.float), dets[j, 1].astype(np.float)), dets[j, 2].astype(np.float) - dets[j, 0].astype(np.float), dets[j, 3].astype(np.float) - dets[j, 1].astype(np.float)
+                    ax[0].add_patch(plt.Rectangle(*coords, fill=False, edgecolor=color, lw=3))
 
-        if (save):
-            plt.savefig(os.path.join(results_dir, 'video_kalman_' + str(frame) + '.png'))
+            total_frames += 1
 
-        if (display):
-            dp.clear_output(wait=True)
-            dp.display(plt.gcf())
-            time.sleep(0.000001)
-            ax[0].cla()
-            ax[1].cla()
+            if (display):
+                ax[1].imshow(im)
+                ax[1].axis('off')
+                ax[1].set_title('Tracked Targets')
 
-    plt.show()
+            start_time = time.time()
+            trackers = mot_tracker.update(dets)
+            cycle_time = time.time() - start_time
+            total_time += cycle_time
 
-    print("Total Tracking took: %.3f for %d frames or %.1f FPS" % (total_time, total_frames, total_frames / total_time))
+            out.append([frame, trackers, time_stamp])
 
-    ############################################################################################################
+            for d in trackers:
+                if (display):
+                    d = d.astype(np.uint32)
+                    ax[1].add_patch(
+                        patches.Rectangle((d[0], d[1]), d[2] - d[0], d[3] - d[1], fill=False, lw=3, ec=colours[d[4] % 32, :]))
+                    ax[1].set_adjustable('box-forced')
 
-    # Result of Kalman tracking (pandas format):
+            if (save):
+                plt.savefig(os.path.join(results_dir, 'video_kalman_' + str(frame) + '.png'))
 
-    df_kalman = ut.kalman_out_to_pandas_for_map(out)
+            if (display):
+                dp.clear_output(wait=True)
+                dp.display(plt.gcf())
+                time.sleep(0.000001)
+                ax[0].cla()
+                ax[1].cla()
 
-    # Save kalman filter output:
+        plt.show()
 
-    ut.save_pkl(df_kalman, os.path.join(results_dir, INPUT + SEQ + CAM +'_kalman_predictions.pkl'))
+        print("Total Tracking took: %.3f for %d frames or %.1f FPS" % (total_time, total_frames, total_frames / total_time))
 
-    #df_pred_corr = ut.panda_to_json_predicted(df_kalman)
-    #ut.save_json(df_pred_corr, os.path.join(results_dir, INPUT + '_predicted_boxes.json'))
+        ############################################################################################################
+
+        # Result of Kalman tracking (pandas format):
+
+        df_kalman = ut.kalman_out_to_pandas_for_map(out)
+
+        # Save kalman filter output:
+
+        ut.save_pkl(df_kalman, os.path.join(results_dir, INPUT + SEQ + CAM +'_kalman_predictions.pkl'))
+
+        #df_pred_corr = ut.panda_to_json_predicted(df_kalman)
+        #ut.save_json(df_pred_corr, os.path.join(results_dir, INPUT + '_predicted_boxes.json'))
 
 

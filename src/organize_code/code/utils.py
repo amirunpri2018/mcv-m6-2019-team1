@@ -1491,7 +1491,7 @@ def subarray(array, (upper_left_pix_row, upper_left_pix_col), (lower_right_pix_r
 
     return subarr
 
-def obtain_timeoff_fps(ROOT_DIR,sequence, camera):
+def obtain_timeoff_fps(ROOT_DIR, sequence, camera):
 
     """Input: Sequence number, Camera number
     Output: Time offset, fps"""
@@ -1511,3 +1511,18 @@ def obtain_timeoff_fps(ROOT_DIR,sequence, camera):
 
 def timestamp_calc(frame, time_offset, fps):
     return frame / fps + time_offset
+
+
+def get_cal_matrix(cal_file):
+    cal_matrix = np.zeros((3, 3))
+
+    with open(cal_file) as f:
+        line = f.readlines()
+        aa = line[0].split(';')
+        for i in range(3):
+            print(i)
+            bb = aa[i].split()
+            cc = np.array(bb, dtype=float)
+            cal_matrix[i, :] = cc
+
+    return cal_matrix

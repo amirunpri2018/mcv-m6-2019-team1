@@ -17,7 +17,8 @@ import cv2 as cv
 #import imageio
 from skimage import exposure
 
-import src.evaluation.evaluation_funcs as evalf
+#import src.evaluation.evaluation_funcs as evalf
+import evaluation.evaluation_funcs as evalf
 # Local modules
 
 # sort

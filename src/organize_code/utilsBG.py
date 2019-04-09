@@ -1,7 +1,8 @@
 from abc import ABCMeta, abstractmethod
 
 import numpy as np
-import src.utils as ut
+#import src.utils as ut
+import utils as ut
 
 # Read frames from video
 
@@ -18,7 +19,8 @@ import matplotlib.patches as mpatches
 # For visulization
 import matplotlib.pyplot as plt
 from skimage.measure import label, regionprops
-import src.evaluation.evaluation_funcs as evalf
+#import src.evaluation.evaluation_funcs as evalf
+import evaluation.evaluation_funcs as evalf
 
 import scipy.stats as stats
 

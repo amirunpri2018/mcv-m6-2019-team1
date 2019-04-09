@@ -1,3 +1,5 @@
+from __future__ import print_function
+
 import xml
 import os
 # -*- coding: utf-8 -*-
@@ -16,9 +18,7 @@ import pandas as pd
 import cv2 as cv
 #import imageio
 from skimage import exposure
-from __future__ import print_function
 
-def BGFromSeq():
 def createHomography(im1path,im2path,plot_flag = False):
 
     img_object = cv.imread(cv.samples.findFile(im1path), cv.IMREAD_GRAYSCALE)
