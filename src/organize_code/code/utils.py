@@ -796,20 +796,21 @@ def track_cleanup(df,MIN_TRACK_LENGTH=5,STATIC_OBJECT = None,MOTION_MERGE = None
     headers = list(df.head(0))
     #print(headers )
     #print('---------')
+    if 'Mx' not in headers:
+        # if the info is not exist -calculate it
+        df_n = pd.DataFrame(columns=headers)
+        tk_df = df.groupby('track_id')
+        for id,tk in tk_df:
+            tk = get_trackMotion(tk)
+            df_n =df_n.append(tk,ignore_index=True)
+
+
+        df = df_n
     if MOTION_MERGE is not None:
         print('merging tracks...')
         # connect tracks that has a continues motion
 
-        if 'Mx' not in headers:
-            # if the info is not exist -calculate it
-            df_n = pd.DataFrame(columns=headers)
-            tk_df = df.groupby('track_id')
-            for id,tk in tk_df:
-                tk = get_trackMotion(tk)
-                df_n =df_n.append(tk,ignore_index=True)
 
-
-            df = df_n
 
         # Calc expected trajectory (acc) based on N detections
         # add N synthetic bboxes to each track

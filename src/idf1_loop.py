@@ -26,6 +26,7 @@ COLORS = [
     '#8c564b', '#c49c94', '#e377c2', '#f7b6d2', '#7f7f7f',
 '#c7c7c7', '#bcbd22', '#dbdb8d', '#17becf', '#9edae5']
 
+SAVE_FLAG = True
 def convert_pkalman(df):
     #['img_id', 'boxes', 'track_id', 'scores']
     #-->['conf', 'frame', 'occlusion', 'track_id', 'xmax', 'xmin', 'ymax', 'ymin', 'track_iou', 'Dx', 'Dy', 'rot', 'zoom']
@@ -88,7 +89,6 @@ def getIDF1(Pred,GT):
             g = []
             tk_g =[]
             gt_bbox = []
-            print(type(f))
             missing_frm.append(f)
 
             continue
@@ -123,9 +123,9 @@ def getIDF1(Pred,GT):
 
     if len(missing_frm)>0:
 
-        print('No GT in frames: #[{}] '.format(missing_frm))
+        print('No GT in frames: #{}'.format(missing_frm))
     if len(missing_pred)>0:
-        print('No prediction in frames #[{}] '.format(missing_pred))
+        print('No prediction in frames #{} '.format(missing_pred))
     mh = mm.metrics.create()
     summary = mh.compute(acc, metrics=['num_frames', 'mota', 'motp','idf1'], name='acc')
     print(summary)
@@ -161,13 +161,15 @@ def main():
     N = 1
     DET = 'RCNN_KALMAN'
 
-    TASK = 'task2'
+    TASK = 'SC_YOLO_KALMAN2'
     WEEK = 'week5'
     #SEQ = 'S03'
     #CAM = 'c010'
     save_in = os.path.join(OUTPUT_DIR,WEEK,TASK,'results.csv')
     EXP_LIST = os.listdir(os.path.join(OUTPUT_DIR,WEEK,TASK))
-    EXP_LIST = EXP_LIST[:2]
+
+    #EXP_LIST = EXP_LIST[-1]
+
     #os.path.join(directory, f) for f in os.listdir(OUTPUT_DIR)
     #EXP_NAME = '{}_{}_{}_N{}'.format(SEQ,CAM,DET, N)
 
@@ -176,10 +178,12 @@ def main():
     Results = pd.DataFrame(columns=headers_relevant)
 
     for EXP_NAME in EXP_LIST:
+
+
         SEQ = EXP_NAME.split('_')[0]
         CAM = EXP_NAME.split('_')[1]
-        print('calculating IDF1 for seq {} and cam {}'.format(SEQ,CAM))
-        results_dir = os.path.join(OUTPUT_DIR, WEEK, TASK, EXP_NAME)
+
+
 
 
         #gt_file = os.path.join(ROOT_DIR,'data', 'm6-full_annotation.xml')
@@ -189,11 +193,17 @@ def main():
             out_file = os.path.join(ROOT_DIR, 'train', SEQ, CAM, 'gt', 'gt.pkl')
             if os.path.isfile(out_file):
                 continue
-            if not os.path.isfile(out_file):
+            if not os.path.isfile(gt_file):
                 continue
+            print('convert files to pkl')
+            print(gt_file)
+            print('...')
             ut.getBBox_from_gt(gt_file,save_in = out_file)
             continue
 
+        results_dir = os.path.join(OUTPUT_DIR, WEEK, TASK, EXP_NAME)
+        if not os.path.isdir(results_dir):
+            continue
         gt_file = os.path.join(ROOT_DIR, 'train', SEQ, CAM, 'gt', 'gt.pkl')
 
         if os.path.isfile(gt_file):
@@ -205,7 +215,9 @@ def main():
 
         current = pd.DataFrame(columns=headers_relevant)
 
-
+        print('calculating IDF1 for seq {} and cam {}'.format(SEQ,CAM))
+        print(EXP_NAME)
+        print('------------------')
             # detection file can be txt/xml/pkl
         #det_file = os.path.join(results_dir,'kalman_out.pkl')
         det_file = os.path.join(results_dir,'pred_tracks.pkl')
@@ -215,22 +227,32 @@ def main():
             if any(x == 'boxes' for x in list(Pred.head(0))) and not any(x == 'xmin' for x in list(Pred.head(0))):
                 print('coverting pandas format..')
                 Pred = convert_pkalman(Pred)
+                if SAVE_FLAG:
+                    os.rename(det_file, os.path.join(results_dir,'pred_tracks0.pkl'))
+                    Pred.to_pickle(det_file)
+
+
         else:
             print('couldnt load :')
             print(det_file)
-        mh,sm = getIDF1(Pred,GT)
-        #print(sm.acc)
+        try:
 
-        #print(mh.idf1)
-        current['Exp_name'] = [EXP_NAME]
-        current['Seq'] = [SEQ]
-        current['Camera'] = [CAM]
-        current['idf1'] = [sm.ix[:,'idf1']]
-        current['motp'] = [sm.ix[:,'motp']]
-        current['mota'] = [sm.ix[:,'mota']]
 
-        Results = Results.append(current ,ignore_index=True)
+            mh,sm = getIDF1(Pred,GT)
+            #print(sm.acc)
 
+            #print(mh.idf1)
+            current['Exp_name'] = [EXP_NAME]
+            current['Seq'] = [SEQ]
+            current['Camera'] = [CAM]
+
+            current['idf1'] = [sm.loc[:,'idf1'].values[0]]
+            current['motp'] = [sm.loc[:,'motp'].values[0]]
+            current['mota'] = [sm.loc[:,'mota'].values[0]]
+            #print(current)
+            Results = Results.append(current ,ignore_index=True)
+        except:
+            print('{} unexpected error'.format(EXP_NAME))
     if PY_VER==3:
         export_csv = Results.to_csv(save_in, sep='\t', encoding='utf-8')
 
