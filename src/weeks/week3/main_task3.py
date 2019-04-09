@@ -36,16 +36,19 @@ import evaluation.bbox_iou as bb
 OUTPUT_DIR ='../output'
 ROOT_DIR = '../'
 # Some constant for the script
-N = 4
+N = 1
 DET = 'YOLO'
-EXP_NAME = '{}_N{}'.format(DET, N)
-TASK = 'task3'
-WEEK = 'week4'
+TASK = 'task2'
+WEEK = 'week5'
+SEQ = 'S03'
+CAM = 'c010'
+EXP_NAME = '{}_{}_{}_N{}'.format(SEQ,CAM,DET, N)
 DET_GAP = 5
 PLOT_FLAG = False
 VID_FLAG = False
 SAVE_FLAG = True
-OF_FLAG = True
+OF_FLAG = False
+REFINE = True
 # OF
 alpha = 0.012
 ratio = 0.75
@@ -61,36 +64,34 @@ def main():
 
     :return: Nothing
     """
-
+    DATA_ROOT = os.path.join(ROOT_DIR,'data', 'AICity_data')
     # Set useful directories
-    frames_dir = os.path.join(
-        ROOT_DIR,
-        'data',
-        'm6_week1_frames',
-        'frames')
+    frames_dir = os.path.join(DATA_ROOT, 'train', SEQ,
+                           CAM,'frames')
     results_dir = os.path.join(OUTPUT_DIR, WEEK, TASK, EXP_NAME)
 
     # Create folders if they don't exist
     if not os.path.isdir(results_dir):
         os.mkdir(results_dir)
     # Ground truth file path
-    gt_file = os.path.join(ROOT_DIR,
-                           'data', 'AICity_data', 'train', 'S03',
-                           'c010', 'gt', 'gt.txt')
+    gt_file = os.path.join(DATA_ROOT, 'train', SEQ,
+                           CAM, 'gt', 'gt.txt')
 
 
-    gt_file = os.path.join(ROOT_DIR,'data', 'm6-full_annotation.xml')
+    #gt_file = os.path.join(ROOT_DIR,'data', 'm6-full_annotation.xml')
     #gt_file = os.path.join(ROOT_DIR,'data', 'm6-full_annotation2.pkl')
-
+    # get camera offsets
+    time_offset, fps = ut.obtain_timeoff_fps(DATA_ROOT,SEQ, CAM)
+    print('Seq :{}, Camera;{} has on offset of {} sec, and {} fps'.format(SEQ,CAM,time_offset,fps))
     #df = ut.getBBox_from_gt(gt_file,save_in = out_file)
     df = ut.getBBox_from_gt(gt_file)
     #print(gt_file)
 
     det_file = os.path.join(ROOT_DIR,
-                           'data', 'AICity_data', 'train', 'S03',
-                           'c010', 'det', 'det_yolo3.txt')
+                           'data', 'AICity_data', 'train',SEQ,
+                           CAM, 'det', 'det_yolo3.txt')
     # Get BBox detection from list
-    det_file = gt_file
+    #det_file = gt_file
     df = ut.getBBox_from_gt(det_file)
     #print(df.dtypes)
     #df = ut.get_bboxes_from_MOTChallenge(gt_file)
@@ -113,7 +114,7 @@ def main():
     df.loc[:,'ratio'] = -1.0
     df.loc[:,'ofDx'] = 0.0
     df.loc[:,'ofDy'] = 0.0
-
+    df.loc[:,'time_stamp_stamp'] = 0.0
     # Group bbox by frame
     df_grouped = df.groupby('frame')
 
@@ -140,7 +141,7 @@ def main():
         df_group = df_group.reset_index(drop=True)
         if f%50==0:
             print(f)
-        if f>4:
+        if f>3000:
             break
 
         im_path = os.path.join(frames_dir,'frame_'+str(int(f)).zfill(3)+'.jpg')
@@ -150,11 +151,20 @@ def main():
 
             frame_p = df_group['frame'].values[0]
             print('First detected object at frame {}'.format(frame_p))
+
+
                     # Assign new tracks
             for t in range(len(df_group)):
 
                 #print(df_group.loc['track_id'])
                 df_group.at[t, 'track_id'] = Track_id
+                bAc,bAa, bAr = bb.getBboxDescriptor(df_group.ix[[t]])
+                df_group.at[t, 'track_id'] = Track_id
+                df_group.at[t,'Mx'] = bAc[0]
+                df_group.at[t, 'My'] = bAc[1]
+                df_group.at[t, 'area'] = bAa
+                df_group.at[t, 'ratio'] = bAr
+                df_group.at[t, 'time_stamp'] = ut.timestamp_calc(f, time_offset, fps)
                 Track_id+=1
 
             df_p_group = pd.DataFrame(columns=headers)
@@ -237,6 +247,9 @@ def main():
 
                     c_u = u[ yv,xv]
                     c_v = v[yv,xv]
+                else:
+                    c_u = 0.0
+                    c_v = 0.0
 
 
 
@@ -244,14 +257,15 @@ def main():
 
                 df_group.loc[[offset+t[1]],'rot'] = box_motion[3]#.columns = ['Dy', 'Dx','zoom','rot','Mx','My']
                 df_group.loc[[offset+t[1]],'zoom'] = box_motion[2]
-                df_group.loc[[offset+t[1]],'Dx'] = box_motion[1]
-                df_group.loc[[offset+t[1]],'Dy'] = box_motion[0]
+                df_group.loc[[offset+t[1]],'Dx'] = box_motion[0]
+                df_group.loc[[offset+t[1]],'Dy'] = box_motion[1]
                 df_group.loc[[offset+t[1]],'Mx'] = box_motion[4]
                 df_group.loc[[offset+t[1]],'My'] = box_motion[5]
                 df_group.loc[[offset+t[1]],'area'] = box_motion[6]
                 df_group.loc[[offset+t[1]],'ratio'] = box_motion[7]
                 df_group.loc[[offset+t[1]],'ofDx'] = np.mean(c_u)
                 df_group.loc[[offset+t[1]],'ofDy'] = np.mean(c_v)
+                df_group.loc[[offset+t[1]],'time_stamp'] = ut.timestamp_calc(f, time_offset, fps)
                 #print(df_group)
 
 
@@ -263,8 +277,13 @@ def main():
             #print(df_group)
         # Assign new tracks
         for t in df_group.index[df_group['track_id'] == -1].tolist():
-
+            bAc,bAa, bAr = bb.getBboxDescriptor(df_group.ix[[t]])
             df_group.at[t, 'track_id'] = Track_id
+            df_group.at[t,'Mx'] = bAc[0]
+            df_group.at[t, 'My'] = bAc[1]
+            df_group.at[t, 'area'] = bAa
+            df_group.at[t, 'ratio'] = bAr
+            df_group.at[t,'time_stamp'] = ut.timestamp_calc(f, time_offset, fps)
             Track_id+=1
 
 
@@ -293,6 +312,14 @@ def main():
         #bbox_iou(bboxA, bboxB)
 
     #    END OF PROCESS
+
+    if REFINE:
+        #df_det = ut.track_cleanup(df_det,MIN_TRACK_LENGTH=10)
+        #df_track = ut.track_cleanup(df_track,MIN_TRACK_LENGTH=10,MOTION_MERGE=5)
+        save_in = os.path.join(results_dir,"pred_tracks0.pkl")
+        df_track.to_pickle(save_in)
+        df_track = ut.track_cleanup(df_track,MIN_TRACK_LENGTH=10,STATIC_OBJECT = 15) # object moved less than 15 pix
+
     if VID_FLAG:
         out.release()
 

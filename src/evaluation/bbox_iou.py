@@ -138,6 +138,13 @@ def calcAreaBbox(bbox):
 def calcRatioBbox(bbox):
     return float(bbox[2]-bbox[0])/ float(bbox[3]-bbox[1])
 
+def getBboxDescriptor(bAp):
+    bA = bbox_list_from_pandas(bAp)
+    bAc = np.array(calcCenterBbox(bA[0]))
+    bAa = calcAreaBbox(bA[0])
+    bAr = calcRatioBbox(bA[0])
+    return bAc,bAa,bAr
+
 def getMotionBbox(bAp,bBp):
     """
     Calc Motion simple features from sequantial bbox
@@ -145,22 +152,23 @@ def getMotionBbox(bAp,bBp):
     Returns:
     Dy,Dx,Zoom,Rot
     """
+    bAc,bAa, bAr = getBboxDescriptor(bAp)
+    bBc,bBa, bBr = getBboxDescriptor(bBp)
+    #bA = bbox_list_from_pandas(bAp)
+    #bB = bbox_list_from_pandas(bBp)
 
-    bA = bbox_list_from_pandas(bAp)
-    bB = bbox_list_from_pandas(bBp)
+    #bAc = calcCenterBbox(bA[0])
+    #bBc = calcCenterBbox(bB[0])
 
-    bAc = calcCenterBbox(bA[0])
-    bBc = calcCenterBbox(bB[0])
-
-    D = list(np.array(bAc) - np.array(bBc))
-
+    #D = list(np.array(bAc) - np.array(bBc))
+    D = list(bAc - bBc)
     #D = bBc-bAc
-    bAa = calcAreaBbox(bA[0])
-    bBa = calcAreaBbox(bB[0])
+    #bAa = calcAreaBbox(bA[0])
+    #bBa = calcAreaBbox(bB[0])
     Ar = bBa/bAa
 
-    bAr = calcRatioBbox(bA[0])
-    bBr = calcRatioBbox(bB[0])
+    #bAr = calcRatioBbox(bA[0])
+    #bBr = calcRatioBbox(bB[0])
     Rr = bBr/bAr
 
     bBp['Dy'] = D[0]

@@ -36,16 +36,16 @@ else:
 OUTPUT_DIR ='../output'
 ROOT_DIR = '../'
 # Some constant for the script
-N = 2
+N = 6
 DET = 'YOLO'
 EXP_NAME = '{}_N{}'.format(DET, N)
-TASK = 'task3'
-WEEK = 'week4'
+TASK = 'task2'
+WEEK = 'week5'
 DET_GAP = 5
 PLOT_FLAG = False
 VID_FLAG = False
-SAVE_FLAG = False
-REFINE = True
+SAVE_FLAG = True
+REFINE = False
 
 def main():
     """
@@ -71,7 +71,7 @@ def main():
                            'c010', 'gt', 'gt.txt')
 
     #gt_file = os.path.join(ROOT_DIR,'data', 'm6-full_annotation.xml')
-    gt_file = os.path.join(ROOT_DIR,'data', 'm6-full_annotation2.pkl')
+    #gt_file = os.path.join(ROOT_DIR,'data', 'm6-full_annotation2.pkl')
 
     # detection file can be txt/xml/pkl
     #det_file = os.path.join(results_dir,'kalman_out.pkl')

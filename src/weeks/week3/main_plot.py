@@ -30,14 +30,16 @@ OUTPUT_DIR ='../output'
 ROOT_DIR = '../'
 # Some constant for the script
 N = 1
-DET = 'YOLO_refine'
-EXP_NAME = '{}_N{}'.format(DET, N)
-TASK = 'task3'
-WEEK = 'week3'
+DET = 'RCNN_KALMAN'
+TASK = 'task2'
+WEEK = 'week5'
+SEQ = 'S03'
+CAM = 'c010'
+EXP_NAME = '{}_{}_{}_N{}'.format(SEQ,CAM,DET, N)
 DET_GAP = 5
 PLOT_FLAG = True
 VID_FLAG = False
-SAVE_FLAG = True
+SAVE_FLAG = False
 REFINE = False
 
 def main():
