@@ -17,6 +17,7 @@ import time
 
 # Local libraries
 import utils.utils_kalman as ut
+import organize_code.code.utils as code_ut
 import utils.utils_xml as ut_xml
 from utils.sort import Sort
 import utils.map_metrics as mp
@@ -34,6 +35,8 @@ SEQ = 'S03'
 CAM = 'c015'
 INPUT = 'det_mask_rcnn'
 
+CREATE_GT_PKL = True
+
 # Set useful directories
 frames_dir = os.path.join(
     ROOT_DIR,
@@ -42,6 +45,7 @@ frames_dir = os.path.join(
     CAM,
     'frames')
 
+
 results_dir = os.path.join(OUTPUT_DIR, WEEK, TASK)
 
 # Create folders if they don't exist
@@ -49,13 +53,8 @@ if not os.path.isdir(results_dir):
     os.mkdir(results_dir)
 
 
-
 tstamp_path = os.path.join(ROOT_DIR, 'cam_timestamp', SEQ + '.txt')
-
 time_offset, fps = ut.obtain_timeoff_fps(tstamp_path, CAM)
-
-
-print('Breake point')
 
 # Tracker graphic options:
 display = False
@@ -65,10 +64,17 @@ def main():
 
     # Ground truth file path:
 
-    gt_file = os.path.join(ROOT_DIR, 'train', SEQ, CAM, 'det', INPUT + '.txt')
+    gt_det = os.path.join(ROOT_DIR, 'train', SEQ, CAM, 'det', INPUT + '.txt')
+
+    # Save gt file as pkl:
+
+    if CREATE_GT_PKL == True:
+        gt_txt = os.path.join(ROOT_DIR, 'train', SEQ, CAM, 'gt', 'gt.txt')
+        save_gt_pkl = os.path.join(ROOT_DIR, 'train', SEQ, CAM, 'gt', 'gt.pkl')
+        code_ut.getBBox_from_gt(gt_txt, save_in=save_gt_pkl)
 
     # Get BBox detection from list
-    df = ut.get_bboxes_from_MOTChallenge(gt_file)
+    df = ut.get_bboxes_from_MOTChallenge(gt_det)
     df.loc[:, 'time_stamp'] = df['frame'].values.tolist()
 
     # Display data:
@@ -158,15 +164,6 @@ def main():
     # Result of Kalman tracking (pandas format):
 
     df_kalman = ut.kalman_out_to_pandas_for_map(out)
-
-    #df_gt = ut.get_bboxes_from_MOTChallenge_for_map(gt_file)
-
-    # If ground truth was used, save ground truth adapted to map_metric.py:
-
-
-    #ut.save_pkl(df_gt, os.path.join(results_dir, INPUT + '_gt_panda.pkl'))
-    #df_gt_corr = ut.panda_to_json_gt(df_gt)
-    #ut.save_json(df_gt_corr, os.path.join(results_dir, INPUT + '_gt_ground_truth_boxes.json'))
 
     # Save kalman filter output:
 
