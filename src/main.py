@@ -1,4 +1,7 @@
 
+#import weeks.week2 as w2
+#import weeks.week3 as w3
+#import weeks.week5 as w5
 
 from weeks.week3 import main_task3 as w3_2
 #from weeks.week3 import main_task_kalman as main_kalman
