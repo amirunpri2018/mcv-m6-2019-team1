@@ -75,10 +75,8 @@ def main():
             bottom_right = (row.left + row.width, row.top + row.height)
 
             patch = patch_from_img(gray, top_left, bottom_right)
-<<<<<<< HEAD
             cv2.imshow(patch)
-=======
->>>>>>> fd694f255c8381016de62b09ce5d009f382ef7dd
+
             _, desc = sift.detectAndCompute(patch, None)
             descs_next.append(desc)
             # descs_next = np.append(descs_next, desc)
@@ -114,7 +112,3 @@ if __name__ == '__main__':
 # - Acomodar DF para que anote si esta matcheado o no
 # - Buscar por timestamp
 # - Generalizar para mas de 1 camara
-<<<<<<< HEAD
-=======
-
->>>>>>> fd694f255c8381016de62b09ce5d009f382ef7dd
