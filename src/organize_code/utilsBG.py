@@ -18,6 +18,7 @@ import matplotlib.patches as mpatches
 # For visulization
 import matplotlib.pyplot as plt
 from skimage.measure import label, regionprops
+#import src.evaluation.evaluation_funcs as evalf
 import evaluation.evaluation_funcs as evalf
 
 import scipy.stats as stats
