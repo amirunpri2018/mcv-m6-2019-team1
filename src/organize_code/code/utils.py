@@ -761,6 +761,19 @@ def mean_velocity(tk,MOTION_MERGE):
     rot = tk['rot'].iloc[-MOTION_MERGE:].mean()
     return [dx,dy,zoom,rot]
 
+def get_cal_matrix(cal_file):
+    cal_matrix = np.zeros((3, 3))
+
+    with open(cal_file) as f:
+        line = f.readlines()
+        aa = line[0].split(';')
+        for i in range(3):
+            print(i)
+            bb = aa[i].split()
+            cc = np.array(bb, dtype=float)
+            cal_matrix[i, :] = cc
+
+    return cal_matrix
 def track_cleanup(df,MIN_TRACK_LENGTH=5,STATIC_OBJECT = None,MOTION_MERGE = None):
     """
     This Function "clean up" detection according to a set of parameters
@@ -1512,3 +1525,11 @@ def obtain_timeoff_fps(ROOT_DIR,sequence, camera):
 
 def timestamp_calc(frame, time_offset, fps):
     return frame / fps + time_offset
+
+def align_frm(df):
+    # aligning all frames to 0
+    fps = 10.0
+    df1 = df
+    df1.loc[:,'frame'] = df1.loc[:,'time_stamp']*fps
+    df1 = df1.round({'frame': 0})
+    return df1

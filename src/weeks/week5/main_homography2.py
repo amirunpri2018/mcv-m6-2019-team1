@@ -19,7 +19,7 @@ import pandas as pd
 #from itertools import repeat
 # Local libraries
 import organize_code.code.utils as ut
-import utils.image as ut_img
+#import utils.image as ut_img
 #import organize_code.code.utils_opticalFlow as of
 import organize_code.utilsBG as bg
 #import organize_code.utils as ut
@@ -89,14 +89,14 @@ def main():
 
     results_dir = os.path.join(OUTPUT_DIR, WEEK, TASK, EXP_NAME)
 
-    if not os.path.isdir(results_dir):
-        os.mkdir(results_dir)
+    #if not os.path.isdir(results_dir):
+    #    os.mkdir(results_dir)
 
-    frame1_paths = ut.get_files_from_dir2(frames1_dir, ext='.jpg')
-    frame2_paths = ut.get_files_from_dir2(frames2_dir, ext='.jpg')
+    #frame1_paths = ut.get_files_from_dir2(frames1_dir, ext='.jpg')
+    #frame2_paths = ut.get_files_from_dir2(frames2_dir, ext='.jpg')
     #frame_paths.sort(key=ut.natural_keys)
-    frame1_paths.sort
-    frame2_paths.sort
+    #frame1_paths.sort
+    #frame2_paths.sort
 
     cal1_matrix = ut.get_cal_matrix(cam1_cal_file)
     cal2_matrix = ut.get_cal_matrix(cam2_cal_file)
@@ -113,14 +113,15 @@ def main():
     cam2_off = 2.177  #Frme1 in cam2 will be frame 6 / 7 in cam 1
 
     px1 = (658.0, 672.0, 1) # (xmax, ymax, 1)
-    px2 = (1669.0, 601.0, 1) # (xmax, ymax, 1)
+    #px1 = (725.0, 481.0, 1) # (xmax, ymax, 1)
+    px2 = (1918.0, 471.0, 1) # (xmax, ymax, 1)
 
     px1_homog = np.dot(H_21, px2)
     px1_result = px1_homog / px1_homog[-1] # [ 88.93484793 270.61688663   1.        ]
 
     print(px1_result)
 
-    cv.imwrite(os.path.join(CAM_PATH,"BG.png"), mu_bg);
+    #cv.imwrite(os.path.join(CAM_PATH,"BG.png"), mu_bg);
 
 
 if __name__ == '__main__':

@@ -161,7 +161,7 @@ def main():
     N = 1
     DET = 'RCNN_KALMAN'
 
-    TASK = 'SC_YOLO_KALMAN2'
+    TASK = 'IOU2'
     WEEK = 'week5'
     #SEQ = 'S03'
     #CAM = 'c010'
