@@ -19,6 +19,10 @@ Detection using Deep learning networks and comparing tracking methods.
 This week goal was to evaluate the contribution of Optical Flow in video stabilization and tracking. 
 comparing different method to obtain the motion field.
 
+### Week 5
+In this final week the goal was to solve the multi camera multi tracking problem. We implement three
+methods and report the metrics for the best of them. You can also find a report of this week under 
+the folder `report`.
 ## Code
 
 The code is structured in the following way:
