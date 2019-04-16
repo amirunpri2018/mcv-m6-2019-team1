@@ -86,7 +86,8 @@ def main():
                 top_left = (np.int(xmin), np.int(ymin))
                 bottom_right = (np.int(xmax), np.int(ymax))
                 patch = patch_from_img(im_h, top_left, bottom_right)
-                hist = np.histogram(patch, bins=16)
+                #hist = np.histogram(patch, bins=16)
+                hist = np.histogram(patch, bins=np.linespace(0,255,16),density=True)
                 histograms_per_frame.append(hist)
                 # cv2.rectangle(frame, top_left, bottom_right, (255, 0, 0), 10)
 
@@ -104,4 +105,3 @@ def main():
 
 if __name__ == '__main__':
     main()
-

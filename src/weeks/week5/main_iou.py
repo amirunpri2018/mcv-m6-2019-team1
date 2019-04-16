@@ -38,9 +38,9 @@ ROOT_DIR = '../../aic19-track1-mtmc-train/'
 # Some constant for the script
 N = 1
 DET = 'YOLO_IOU'
-TASK = 'IOU'
+TASK = 'IOU_S03'
 WEEK = 'week5'
-SEQ = 'S03'
+SEQ = 'S04'
 CAM = 'c010'
 
 DET_GAP = 5
@@ -48,7 +48,7 @@ PLOT_FLAG = False
 VID_FLAG = False
 SAVE_FLAG = True
 OF_FLAG = False
-REFINE = False
+REFINE = True
 # OF
 alpha = 0.012
 ratio = 0.75
@@ -66,7 +66,8 @@ def main():
     """
     DATA_ROOT = ROOT_DIR#os.path.join(ROOT_DIR,'data', 'AICity_data')
     # Set useful directories
-    CAMS = ['c011','c012','c013','c014','c015']
+    #CAMS = ['c016','c017','c018','c019','c020']
+    CAMS = os.listdir(os.path.join(DATA_ROOT, 'train', SEQ))
     for CAM in CAMS:
         EXP_NAME = '{}_{}_{}_N{}'.format(SEQ,CAM,DET, N)
         frames_dir = os.path.join(DATA_ROOT, 'train', SEQ,
@@ -118,7 +119,7 @@ def main():
         df.loc[:,'ratio'] = -1.0
         df.loc[:,'ofDx'] = 0.0
         df.loc[:,'ofDy'] = 0.0
-        df.loc[:,'time_stamp_stamp'] = 0.0
+        df.loc[:,'time_stamp'] = 0.0
         # Group bbox by frame
         df_grouped = df.groupby('frame')
 

@@ -101,6 +101,8 @@ def main():
     cal1_matrix = ut.get_cal_matrix(cam1_cal_file)
     cal2_matrix = ut.get_cal_matrix(cam2_cal_file)
     cal2_matrix_inv = np.linalg.inv(cal2_matrix)
+    cal1_matrix_inv = np.linalg.inv(cal1_matrix)
+
     H_21 = np.dot(cal1_matrix, cal2_matrix_inv)
 
     gt1_file = os.path.join(CAM1_PATH, 'gt', 'gt.pkl')
@@ -116,10 +118,20 @@ def main():
     #px1 = (725.0, 481.0, 1) # (xmax, ymax, 1)
     px2 = (1918.0, 471.0, 1) # (xmax, ymax, 1)
 
-    px1_homog = np.dot(H_21, px2)
-    px1_result = px1_homog / px1_homog[-1] # [ 88.93484793 270.61688663   1.        ]
+    px2gps = np.dot(cal2_matrix_inv,px2)
+    px1gps = np.dot(cal1_matrix_inv,px1)
+    print(['px1 gps {}',px1gps])
+    print(['px2 gps {}',px2gps])
+    px1gpsh = px1gps / px1gps[-1]
+    px2gpsh = px2gps / px2gps[-1]
+    print(['px1 gps H {}',px1gpsh])
+    print(['px2 gps H {}',px2gpsh])
 
-    print(px1_result)
+    #px1_homog = np.dot(H_21, px2)
+
+    #px1_result = px1_homog / px1_homog[-1] # [ 88.93484793 270.61688663   1.        ]
+
+    #print(px1_result)
 
     #cv.imwrite(os.path.join(CAM_PATH,"BG.png"), mu_bg);
 
